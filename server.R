@@ -41,6 +41,8 @@ server <- function(input, output) {
         # quantify the mapping
         labs_orig <- as.character(pData(scmap_map)$cell_type1)
         labs_new <- pData(scmap_map)$scmap_labs
+        
+        values$mapping <- data.frame(cell_ids = rownames(pData(scmap_map)), scmap_assignments = labs_new)
         # Cohen's Kappa coefficient
         # kappa2(cbind(labs_orig, labs_new))$value
         # Sankey diagram
@@ -49,7 +51,10 @@ server <- function(input, output) {
     }
     
     output$sankey <- renderGvis({
-        get_sankey()
+        withProgress(message = 'Making plot', {
+            incProgress()
+            get_sankey()
+        })
     })
     
     output$ref_features <- renderPlot({
@@ -65,5 +70,14 @@ server <- function(input, output) {
             getFeatures(values$scmap_ref, n_features = as.numeric(input$n_features), suppress_plot = FALSE)
         })
     })
+    
+    output$download_mapping <- downloadHandler(
+      filename = function() {
+        paste('scmap_mapping.csv', sep='')
+      },
+      content = function(con) {
+        write.csv(values$mapping, con, quote = FALSE, row.names = FALSE)
+      }
+    )
 
 }

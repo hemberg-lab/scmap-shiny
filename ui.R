@@ -42,10 +42,11 @@ ui <- dashboardPage(
                     column(width = 1),
                     column(width = 10,
                         HTML("<h2>Please select a Reference dataset</h2><br>"),
+                        HTML("<p>The details of the reference datasets are available <a href = 'https://hemberg-lab.github.io/scRNA.seq.datasets/'>here</a>.</p><br>"),
                         box(
                             radioButtons("data_type", "1. Choose Data Type:",
                                                c("Human Pancreas" = "pancreas",
-                                                 "Mouse Embryo Development" = "embryo"))
+                                                 "Mouse Embryo" = "embryo"))
                         ),
                         box(
                             conditionalPanel(
@@ -97,7 +98,16 @@ ui <- dashboardPage(
                 )
             ),
             tabItem(tabName = "results",
-                    htmlOutput("sankey")
+                fluidRow(
+                    column(width = 1),
+                    column(width = 10,
+                        HTML("<h2>Sankey diagram:</h2><br>"),
+                        htmlOutput("sankey"),
+                        HTML("<br>"),
+                        downloadLink('download_mapping', 'Download Results')
+                    ),
+                    column(width = 1)
+                )
             )
         )
     )
