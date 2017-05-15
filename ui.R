@@ -25,7 +25,6 @@ embryo_datasets <- c(
 )
 
 ui <- dashboardPage(
-    tags$head(includeScript("google-analytics.js")),
     skin = "purple",
     dashboardHeader(title = "scmap"),
     dashboardSidebar(
@@ -37,6 +36,7 @@ ui <- dashboardPage(
         )
     ),
     dashboardBody(
+        tags$head(includeScript("google-analytics.js")),
         tabItems(
             tabItem(tabName = "refs",
                 fluidRow(
