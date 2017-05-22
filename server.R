@@ -45,7 +45,7 @@ server <- function(input, output) {
         ))
         scmap_map <- readRDS(input$to_project$datapath)
         
-        scmap_ref <- readRDS(paste0("refs/", values$reference_file))
+        scmap_ref <- readRDS(values$reference_file)
         scmap_ref <- getFeatures(scmap_ref, n_features = as.numeric(input$n_features))
 
         # find and select only common features
@@ -127,9 +127,9 @@ server <- function(input, output) {
         if(input$data_type == "existing") {
             if(!is.null(input$ref_type)) {
                 if(input$ref_type == "pancreas") {
-                    values$reference_file <- input$refs_pancreas
+                    values$reference_file <- paste0("refs/", input$refs_pancreas)
                 } else {
-                    values$reference_file <- input$refs_embryo
+                    values$reference_file <- paste0("refs/", input$refs_embryo)
                 }
             }
         } else {
@@ -148,7 +148,7 @@ server <- function(input, output) {
         withProgress(message = 'Making plot', {
             incProgress()
             if (input$data_type == "existing") {
-                scmap_ref <- readRDS(paste0("refs/", values$reference_file))
+                scmap_ref <- readRDS(values$reference_file)
             } else {
                 validate(need(
                     values$reference_file,
