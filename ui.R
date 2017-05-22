@@ -8,7 +8,9 @@
 library(shinydashboard)
 library(shiny)
 
-ui <- dashboardPage(
+ui <- tagList( 
+    
+dashboardPage(
     
     # skin = "purple",
     dashboardHeader(title = "scmap"),
@@ -90,4 +92,14 @@ ui <- dashboardPage(
             )
         )
     )
+),
+    tags$footer(HTML("<a href = 'http://www.sanger.ac.uk/science/groups/hemberg-group'>Hemberg Group</a> &middot; Please send feedback/comments/suggestions to <a href='mailto:vladimir.yu.kiselev@gmail.com'>Vladimir Kiselev</a>"), align = "center", style = "
+              position:absolute;
+              bottom:0;
+              width:100%;
+              height:43px;   /* Height of the footer */
+              color: white;
+              padding: 10px;
+              background-color: black;
+              z-index: 1000;")
 )
