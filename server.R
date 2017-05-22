@@ -21,7 +21,7 @@ pancreas_datasets <- c(
 )
 
 embryo_datasets <- c(
-    "bias.rds",
+    "biase.rds",
     "deng-rpkms.rds",
     "deng-reads.rds",
     "fan.rds",
@@ -30,29 +30,32 @@ embryo_datasets <- c(
 
 ## define server global variables
 values <- reactiveValues()
-values$reference <- FALSE
 
 # Define server logic required to draw a histogram
 server <- function(input, output) {
     
     get_sankey <- function() {
         validate(need(
-            values$scmap_ref,
+            values$reference_file,
             "\nPlease upload your Reference dataset first!"
         ))
-        inFile <- input$to_project
         validate(need(
-            inFile,
+            input$to_project$datapath,
             "\nPlease upload your Projection dataset first!"
         ))
-        scmap_map <- readRDS(inFile$datapath)
+        scmap_map <- readRDS(input$to_project$datapath)
         
-        scmap_ref <- values$scmap_ref
-        scmap_ref <- getFeatures(scmap_ref)
+        scmap_ref <- readRDS(paste0("refs/", values$reference_file))
+        scmap_ref <- getFeatures(scmap_ref, n_features = as.numeric(input$n_features))
 
         # find and select only common features
         scmap_map <- setFeatures(scmap_map, fData(scmap_ref)$feature_symbol[fData(scmap_ref)$scmap_features])
         scmap_ref <- setFeatures(scmap_ref, fData(scmap_map)$feature_symbol[fData(scmap_map)$scmap_features])
+        
+        validate(need(
+            length(which(scmap_ref@featureData@data$scmap_features)) >= 2,
+            "\nThere are no common features between the Reference and Projection datasets! Either check that both datasets are from the same organism or increase the number of selected features (>100)."
+        ))
         
         # main scmap function
         scmap_map <- mapData(
@@ -61,6 +64,11 @@ server <- function(input, output) {
         )
         
         # quantify the mapping
+        validate(need(
+            pData(scmap_map)$scmap_labs,
+            "\nMapping didn't work! Please check your datasets."
+        ))
+        
         labs_orig <- as.character(pData(scmap_map)$cell_type1)
         labs_new <- pData(scmap_map)$scmap_labs
         
@@ -80,7 +88,15 @@ server <- function(input, output) {
         # UI component and send it to the client.
         switch(input$data_type,
                "own" = list(
-                   HTML("2. Select an <b>.rds</b> file containing data in <a href = 'http://bioconductor.org/packages/scater'>scater</a> format<br><br>"),
+                   HTML("2. Select an <b>.rds</b> file containing data in <a href = 'http://bioconductor.org/packages/scater'>scater</a> format (<a href='https://scrnaseq-public-datasets.s3.amazonaws.com/scater-objects/muraro.rds'>example</a>)<br><br>"),
+                   HTML("<font color='#f0ad4e'><b><em>phenoData</em></b> slot of 
+                        the Reference dataset must have the <b><em>cell_type1</em></b> 
+                        column. This column contains cell type labels that will 
+                        be used in projecting. See example above. <br><br> <b><em>featureData</em></b> 
+                        slot of the Reference dataset must have the 
+                        <b><em>feature_symbol</em></b> column. This column contains 
+                        Feature (gene/transcript) names that will be used in 
+                        projecting. See example above.</font><br><br>"),
                    fileInput('reference', NULL, accept=c('.rds'))
                    ),
                "existing" = list(
@@ -109,9 +125,15 @@ server <- function(input, output) {
     
     observe({
         if(input$data_type == "existing") {
-            values$reference <- TRUE
+            if(!is.null(input$ref_type)) {
+                if(input$ref_type == "pancreas") {
+                    values$reference_file <- input$refs_pancreas
+                } else {
+                    values$reference_file <- input$refs_embryo
+                }
+            }
         } else {
-            values$reference <- FALSE
+            values$reference_file <- input$reference$datapath
         }
     })
     
@@ -125,22 +147,16 @@ server <- function(input, output) {
     output$ref_features <- renderPlot({
         withProgress(message = 'Making plot', {
             incProgress()
-            if (values$reference) {
-                if(input$ref_type == "pancreas") {
-                    values$scmap_ref <- readRDS(paste0("refs/", input$refs_pancreas))
-                }
-                
-                if(input$ref_type == "embryo") {
-                    values$scmap_ref <- readRDS(paste0("refs/", input$refs_embryo))
-                }
+            if (input$data_type == "existing") {
+                scmap_ref <- readRDS(paste0("refs/", values$reference_file))
             } else {
                 validate(need(
-                    input$reference$datapath,
+                    values$reference_file,
                     "\nPlease upload your Reference dataset first!"
                 ))
-                values$scmap_ref <- readRDS(input$reference$datapath)
+                scmap_ref <- readRDS(values$reference_file)
             }
-            getFeatures(values$scmap_ref, n_features = as.numeric(input$n_features), suppress_plot = FALSE)
+            getFeatures(scmap_ref, n_features = as.numeric(input$n_features), suppress_plot = FALSE)
         })
     })
     

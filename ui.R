@@ -46,7 +46,12 @@ ui <- dashboardPage(
                 fluidRow(
                     box(width = 12,
                         title = "Projection dataset",
-                        HTML("Select an <b>.rds</b> file containing data in <a href = 'http://bioconductor.org/packages/scater'>scater</a> format<br><br>"),
+                        HTML("Select an <b>.rds</b> file containing data in <a href = 'http://bioconductor.org/packages/scater'>scater</a> format (<a href='https://scrnaseq-public-datasets.s3.amazonaws.com/scater-objects/segerstolpe.rds'>example</a>)<br><br>"),
+                        HTML("<font color='#f0ad4e'><b><em>featureData</em></b> 
+                             slot of the Projection dataset must have the 
+                             <b><em>feature_symbol</em></b> column. This column contains 
+                             Feature (gene/transcript) names that will be used in 
+                             projecting. See example above.</font><br><br>"),
                         fileInput('to_project', NULL, accept=c('.rds')),
                         solidHeader = TRUE,
                         status = "primary"
@@ -60,7 +65,7 @@ ui <- dashboardPage(
                        HTML("Choose the number of features to be used for projection"),
                        radioButtons("n_features",
                                     NULL,
-                                    choices = c("10", "100", "1000"),
+                                    choices = c("100", "1000"),
                                     selected = "100",
                                     inline = TRUE),
                        
