@@ -8,106 +8,79 @@
 library(shinydashboard)
 library(shiny)
 
-pancreas_datasets <- c(
-    "baron-human.rds",
-    "baron-mouse.rds",
-    "muraro.rds",
-    "segerstolpe.rds",
-    "xin.rds"
-)
-
-embryo_datasets <- c(
-    "bias.rds",
-    "deng-rpkms.rds",
-    "deng-reads.rds",
-    "fan.rds",
-    "goolam.rds"
-)
-
 ui <- dashboardPage(
-    skin = "purple",
+    
+    # skin = "purple",
     dashboardHeader(title = "scmap"),
     dashboardSidebar(
         sidebarMenu(
-            menuItem("Reference", tabName = "refs", icon = icon("cloud")),
-            menuItem("Feature Selection", tabName = "ref_overview", icon = icon("gears")),
-            menuItem("Upload", tabName = "upload", icon = icon("cloud-upload")),
+            menuItem("Datasets", tabName = "refs", icon = icon("cloud-upload")),
+            menuItem("Features", tabName = "ref_overview", icon = icon("gears")),
             menuItem("Results", tabName = "results", icon = icon("area-chart"))
         )
     ),
     dashboardBody(
+        tags$head(tags$style(
+            HTML(".shiny-output-error-validation {
+                    color: red;
+                 }")
+            )
+        ),
         tags$head(includeScript("google-analytics.js")),
         tabItems(
             tabItem(tabName = "refs",
                 fluidRow(
-                    column(width = 1),
-                    column(width = 10,
-                        HTML("<h2>Please select a Reference dataset</h2><br>"),
-                        HTML("<p>The details of the reference datasets are available <a href = 'https://hemberg-lab.github.io/scRNA.seq.datasets/'>here</a>.</p><br>"),
-                        box(
-                            radioButtons("data_type", "1. Choose Data Type:",
-                                               c("Human Pancreas" = "pancreas",
-                                                 "Mouse Embryo" = "embryo"))
-                        ),
-                        box(
-                            conditionalPanel(
-                                condition = "input.data_type == 'pancreas'",
-                                selectInput(inputId = "refs_pancreas",
-                                            label = "2. Choose Dataset:",
-                                            pancreas_datasets)
-                            ),
-                            conditionalPanel(
-                                condition = "input.data_type == 'embryo'",
-                                selectInput(inputId = "refs_embryo",
-                                            label = "2. Choose Dataset:",
-                                            embryo_datasets)
-                            )
-                        )
-                    ),
-                    column(width = 1)
+                    box(width = 12,
+                        title = "Reference dataset",
+                        HTML("1. What would like to do?"),
+                        radioButtons("data_type", NULL,
+                                    c("Upload your own dataset" = "own",
+                                      "Use existing Reference" = "existing"),
+                                    selected = "own"),
+                        HTML("<hr>"),
+                        uiOutput("ui"),
+                        solidHeader = TRUE,
+                        status = "primary"
+                    )
+                ),
+                fluidRow(
+                    box(width = 12,
+                        title = "Projection dataset",
+                        HTML("Select an <b>.rds</b> file containing data in <a href = 'http://bioconductor.org/packages/scater'>scater</a> format<br><br>"),
+                        fileInput('to_project', NULL, accept=c('.rds')),
+                        solidHeader = TRUE,
+                        status = "primary"
+                    )
                 )
             ),
             tabItem(tabName = "ref_overview",
                 fluidRow(
-                    column(width = 1),
-                    column(width = 10,
-                           HTML("<h2>Feature selection:</h2><br>"),
-                           box(width = 12,
-                               radioButtons("n_features",
-                                            "Choose the number of selected features:",
-                                            choices = c("10", "100", "1000"),
-                                            selected = "100",
-                                            inline = TRUE)
-                           ),
-                            box(width = 12,
-                                plotOutput("ref_features")
-                            )
-                    ),
-                    column(width = 1)
-                )
-            ),
-            tabItem(tabName = "upload",
-                fluidRow(
-                    column(width = 1),
-                    column(width = 10,
-                        HTML("<h2>Please upload your own dataset</h2><br>"),
-                        box(width = 12,
-                            fileInput('file1', '3. Choose a `scater` object in RDS format:', accept=c('.rds'))
-                        )
-                    ),
-                    column(width = 1)
+                   box(width = 12,
+                       title = "Projection features (genes/transcripts)",
+                       HTML("Choose the number of features to be used for projection"),
+                       radioButtons("n_features",
+                                    NULL,
+                                    choices = c("10", "100", "1000"),
+                                    selected = "100",
+                                    inline = TRUE),
+                       
+                       plotOutput("ref_features"),
+                       solidHeader = TRUE,
+                       status = "primary"
+                   )
                 )
             ),
             tabItem(tabName = "results",
                 fluidRow(
-                    column(width = 1),
-                    column(width = 10,
-                        HTML("<h2>Sankey diagram:</h2><br>"),
+                    box(width = 12,
+                        title = "Sankey diagram",
+                        HTML("<br>"),
                         htmlOutput("sankey"),
                         HTML("<br>"),
-                        downloadLink('download_mapping', 'Download Results')
-                    ),
-                    column(width = 1)
+                        downloadLink('download_mapping', 'Download Results'),
+                        solidHeader = TRUE,
+                        status = "primary"
+                    )
                 )
             )
         )

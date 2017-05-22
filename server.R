@@ -13,16 +13,38 @@ library(scmap)
 
 options(shiny.maxRequestSize=200*1024^2)
 
+pancreas_datasets <- c(
+    "baron-human.rds",
+    "muraro.rds",
+    "segerstolpe.rds",
+    "xin.rds"
+)
+
+embryo_datasets <- c(
+    "bias.rds",
+    "deng-rpkms.rds",
+    "deng-reads.rds",
+    "fan.rds",
+    "goolam.rds"
+)
+
 ## define server global variables
 values <- reactiveValues()
+values$reference <- FALSE
 
 # Define server logic required to draw a histogram
 server <- function(input, output) {
     
     get_sankey <- function() {
-        inFile <- input$file1
-        if (is.null(inFile))
-            return(NULL)
+        validate(need(
+            values$scmap_ref,
+            "\nPlease upload your Reference dataset first!"
+        ))
+        inFile <- input$to_project
+        validate(need(
+            inFile,
+            "\nPlease upload your Projection dataset first!"
+        ))
         scmap_map <- readRDS(inFile$datapath)
         
         scmap_ref <- values$scmap_ref
@@ -50,6 +72,49 @@ server <- function(input, output) {
         return(sankey)
     }
     
+    output$ui <- renderUI({
+        if (is.null(input$data_type))
+            return()
+        
+        # Depending on input$input_type, we'll generate a different
+        # UI component and send it to the client.
+        switch(input$data_type,
+               "own" = list(
+                   HTML("2. Select an <b>.rds</b> file containing data in <a href = 'http://bioconductor.org/packages/scater'>scater</a> format<br><br>"),
+                   fileInput('reference', NULL, accept=c('.rds'))
+                   ),
+               "existing" = list(
+                   HTML("2. Our own Reference "),
+                   HTML("(more information <a href = 'https://hemberg-lab.github.io/scRNA.seq.datasets/'>here</a>)<br><br>"),
+                   HTML("<em>Choose a data type</em>"),
+                   radioButtons("ref_type", NULL,
+                                c("Human Pancreas" = "pancreas",
+                                  "Mouse Embryo" = "embryo")),
+                   HTML("<em>Choose a dataset</em><br><br>"),
+                   conditionalPanel(
+                       condition = "input.ref_type == 'pancreas'",
+                       selectInput(inputId = "refs_pancreas",
+                                   label = NULL,
+                                   pancreas_datasets)
+                   ),
+                   conditionalPanel(
+                       condition = "input.ref_type == 'embryo'",
+                       selectInput(inputId = "refs_embryo",
+                                   label = NULL,
+                                   embryo_datasets)
+                   )
+               )
+        )
+    })
+    
+    observe({
+        if(input$data_type == "existing") {
+            values$reference <- TRUE
+        } else {
+            values$reference <- FALSE
+        }
+    })
+    
     output$sankey <- renderGvis({
         withProgress(message = 'Making plot', {
             incProgress()
@@ -60,12 +125,20 @@ server <- function(input, output) {
     output$ref_features <- renderPlot({
         withProgress(message = 'Making plot', {
             incProgress()
-            if(input$data_type == "pancreas") {
-                values$scmap_ref <- readRDS(paste0("refs/", input$refs_pancreas))
-            }
-            
-            if(input$data_type == "embryo") {
-                values$scmap_ref <- readRDS(paste0("refs/", input$refs_embryo))
+            if (values$reference) {
+                if(input$ref_type == "pancreas") {
+                    values$scmap_ref <- readRDS(paste0("refs/", input$refs_pancreas))
+                }
+                
+                if(input$ref_type == "embryo") {
+                    values$scmap_ref <- readRDS(paste0("refs/", input$refs_embryo))
+                }
+            } else {
+                validate(need(
+                    input$reference$datapath,
+                    "\nPlease upload your Reference dataset first!"
+                ))
+                values$scmap_ref <- readRDS(input$reference$datapath)
             }
             getFeatures(values$scmap_ref, n_features = as.numeric(input$n_features), suppress_plot = FALSE)
         })
