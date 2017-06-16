@@ -9,6 +9,7 @@ library(shinydashboard)
 library(shiny)
 library(scater)
 library(googleVis)
+library(plotly)
 library(scmap)
 
 options(shiny.maxRequestSize=200*1024^2)
@@ -58,7 +59,7 @@ server <- function(input, output) {
         ))
         
         # main scmap function
-        scmap_map <- mapData(
+        scmap_map <- projectData(
             scmap_map,
             scmap_ref
         )
@@ -88,25 +89,25 @@ server <- function(input, output) {
         # UI component and send it to the client.
         switch(input$data_type,
                "own" = list(
-                   HTML("2. Select an <b>.rds</b> file containing data in <a href = 'http://bioconductor.org/packages/scater'>scater</a> format (<a href='https://scrnaseq-public-datasets.s3.amazonaws.com/scater-objects/muraro.rds'>example</a>)<br><br>"),
-                   HTML("<font color='#f0ad4e'><b><em>phenoData</em></b> slot of 
-                        the Reference dataset must have the <b><em>cell_type1</em></b> 
-                        column. This column contains cell type labels that will 
-                        be used in projecting. See example above. <br><br> <b><em>featureData</em></b> 
-                        slot of the Reference dataset must have the 
-                        <b><em>feature_symbol</em></b> column. This column contains 
-                        Feature (gene/transcript) names that will be used in 
-                        projecting. See example above.</font><br><br>"),
-                   fileInput('reference', NULL, accept=c('.rds'))
+                   HTML("<div class='panel panel-primary'>
+                            <div class='panel-heading'>Select an <b>.rds</b> file containing data in <a href = 'http://bioconductor.org/packages/scater'>scater</a> format (<a href='https://scrnaseq-public-datasets.s3.amazonaws.com/scater-objects/muraro.rds'>example</a>)</div>
+                            <div class='panel-body'>
+                        "),
+                   fileInput('reference', NULL, accept=c('.rds')),
+                   HTML("</div></div>")
                    ),
                "existing" = list(
-                   HTML("2. Our own Reference "),
-                   HTML("(more information <a href = 'https://hemberg-lab.github.io/scRNA.seq.datasets/'>here</a>)<br><br>"),
-                   HTML("<em>Choose a data type</em>"),
+                   HTML("<div class='panel panel-primary'>
+                            <div class='panel-heading'>Choose a data type</div>
+                            <div class='panel-body'>
+                        "),
                    radioButtons("ref_type", NULL,
                                 c("Human Pancreas" = "pancreas",
                                   "Mouse Embryo" = "embryo")),
-                   HTML("<em>Choose a dataset</em><br><br>"),
+                   HTML("</div></div>"),
+                   HTML("<div class='panel panel-primary'>
+                            <div class='panel-heading'>Choose a Reference</div>
+                            <div class='panel-body'>"),
                    conditionalPanel(
                        condition = "input.ref_type == 'pancreas'",
                        selectInput(inputId = "refs_pancreas",
@@ -118,7 +119,8 @@ server <- function(input, output) {
                        selectInput(inputId = "refs_embryo",
                                    label = NULL,
                                    embryo_datasets)
-                   )
+                   ),
+                   HTML("</div></div>")
                )
         )
     })
@@ -144,7 +146,7 @@ server <- function(input, output) {
         })
     })
     
-    output$ref_features <- renderPlot({
+    output$ref_features <- renderPlotly({
         withProgress(message = 'Making plot', {
             incProgress()
             if (input$data_type == "existing") {
@@ -156,7 +158,7 @@ server <- function(input, output) {
                 ))
                 scmap_ref <- readRDS(values$reference_file)
             }
-            getFeatures(scmap_ref, n_features = as.numeric(input$n_features), suppress_plot = FALSE)
+            scmap:::plotFeatures(scmap_ref, n_features = as.numeric(input$n_features))
         })
     })
     
