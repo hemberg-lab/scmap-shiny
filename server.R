@@ -14,20 +14,7 @@ library(scmap)
 
 options(shiny.maxRequestSize=200*1024^2)
 
-pancreas_datasets <- c(
-    "baron-human.rds",
-    "muraro.rds",
-    "segerstolpe.rds",
-    "xin.rds"
-)
-
-embryo_datasets <- c(
-    "biase.rds",
-    "deng-rpkms.rds",
-    "deng-reads.rds",
-    "fan.rds",
-    "goolam.rds"
-)
+refs <- list.files("refs", pattern = ".txt")
 
 ## define server global variables
 values <- reactiveValues()
@@ -48,15 +35,6 @@ server <- function(input, output) {
         
         scmap_ref <- readRDS(values$reference_file)
         scmap_ref <- getFeatures(scmap_ref, n_features = as.numeric(input$n_features))
-
-        # find and select only common features
-        scmap_map <- setFeatures(scmap_map, fData(scmap_ref)$feature_symbol[fData(scmap_ref)$scmap_features])
-        scmap_ref <- setFeatures(scmap_ref, fData(scmap_map)$feature_symbol[fData(scmap_map)$scmap_features])
-        
-        validate(need(
-            length(which(scmap_ref@featureData@data$scmap_features)) >= 2,
-            "\nThere are no common features between the Reference and Projection datasets! Either check that both datasets are from the same organism or increase the number of selected features (>100)."
-        ))
         
         # main scmap function
         scmap_map <- projectData(
@@ -67,21 +45,78 @@ server <- function(input, output) {
         # quantify the mapping
         validate(need(
             pData(scmap_map)$scmap_labs,
-            "\nMapping didn't work! Please check your datasets."
+            "There are less than ten features in common between the Reference and Projection datasets. Most probably they come from different organisms!"
         ))
         
-        labs_orig <- as.character(pData(scmap_map)$cell_type1)
         labs_new <- pData(scmap_map)$scmap_labs
         
+        uns_rate <- length(labs_new[labs_new == "unassigned"])/length(labs_new) * 100
+        
         values$mapping <- data.frame(cell_ids = rownames(pData(scmap_map)), scmap_assignments = labs_new)
-        # Cohen's Kappa coefficient
-        # kappa2(cbind(labs_orig, labs_new))$value
+        if (uns_rate > 50) {
+            values$mapping_uns <- paste0("<p class='text-danger'><b>", round(uns_rate, 1), "% of the cells were unassigned.</b></p>")
+        } else {
+            values$mapping_uns <- paste0("<p class='text-success'><b>", round(uns_rate, 1), "% of the cells were unassigned.</b></p>")
+        }
         # Sankey diagram
-        sankey <- getSankey(labs_orig, labs_new)
-        return(sankey)
+        if (!is.null(pData(scmap_map)$cell_type1)) {
+            values$mapping_sank <- NULL
+            labs_orig <- as.character(pData(scmap_map)$cell_type1)
+            sankey <- getSankey(labs_orig, labs_new)
+            return(sankey)
+        } else {
+            values$mapping_sank <- "<p class='text-danger'>There is no <b><em>cell_type1</em></b> column in the <b><em>phenoData</em></b> slot of your dataset, therefore Sankey diagram cannot be plotted.</p>"
+        }
+        return(NULL)
     }
     
-    output$ui <- renderUI({
+    get_sankey_ref <- function(ref) {
+        validate(need(
+            input$to_project$datapath,
+            "Please upload your Projection dataset first!"
+        ))
+        
+        print(ref)
+        
+        ref_data <- read.table(paste0("refs/", ref), check.names = FALSE, sep = "\t")
+        scmap_map <- readRDS(input$to_project$datapath)
+        
+        # main scmap function
+        scmap_map <- projectData(
+            scmap_map,
+            class_ref = ref_data
+        )
+        
+        # quantify the mapping
+        
+        validate(need(
+            pData(scmap_map)$scmap_labs,
+            "There are less than ten features in common between the Reference and Projection datasets. Most probably they come from different organisms!"
+        ))
+        
+        labs_new <- pData(scmap_map)$scmap_labs
+        
+        uns_rate <- length(labs_new[labs_new == "unassigned"])/length(labs_new) * 100
+        
+        values[[ref]] <- data.frame(cell_ids = rownames(pData(scmap_map)), scmap_assignments = labs_new)
+        if (uns_rate > 50) {
+            values[[paste0(ref, "-uns")]] <- paste0("<p class='text-danger'><b>", round(uns_rate, 1), "% of the cells were unassigned.</b></p>")
+        } else {
+            values[[paste0(ref, "-uns")]] <- paste0("<p class='text-success'><b>", round(uns_rate, 1), "% of the cells were unassigned.</b></p>")
+        }
+        # Sankey diagram
+        if (!is.null(pData(scmap_map)$cell_type1)) {
+            values[[paste0(ref, "-sank")]] <- NULL
+            labs_orig <- as.character(pData(scmap_map)$cell_type1)
+            sankey <- getSankey(labs_orig, labs_new)
+            return(sankey)
+        } else {
+            values[[paste0(ref, "-sank")]] <- "<p class='text-danger'>There is no <b><em>cell_type1</em></b> column in the <b><em>phenoData</em></b> slot of your dataset, therefore Sankey diagram cannot be plotted.</p>"
+        }
+        return(NULL)
+    }
+    
+    output$datasets <- renderUI({
         if (is.null(input$data_type))
             return()
         
@@ -95,49 +130,529 @@ server <- function(input, output) {
                         "),
                    fileInput('reference', NULL, accept=c('.rds')),
                    HTML("</div></div>")
-                   ),
+               ),
                "existing" = list(
                    HTML("<div class='panel panel-primary'>
-                            <div class='panel-heading'>Choose a data type</div>
+                            <div class='panel-heading'>Existing Reference</div>
                             <div class='panel-body'>
                         "),
-                   radioButtons("ref_type", NULL,
-                                c("Human Pancreas" = "pancreas",
-                                  "Mouse Embryo" = "embryo")),
-                   HTML("</div></div>"),
-                   HTML("<div class='panel panel-primary'>
-                            <div class='panel-heading'>Choose a Reference</div>
-                            <div class='panel-body'>"),
-                   conditionalPanel(
-                       condition = "input.ref_type == 'pancreas'",
-                       selectInput(inputId = "refs_pancreas",
-                                   label = NULL,
-                                   pancreas_datasets)
-                   ),
-                   conditionalPanel(
-                       condition = "input.ref_type == 'embryo'",
-                       selectInput(inputId = "refs_embryo",
-                                   label = NULL,
-                                   embryo_datasets)
-                   ),
+                   HTML("<p class='text-warning'>Your data will be projected to all datasets in our Reference.
+                         For more details of the Reference please visit
+                         our <a href='https://hemberg-lab.github.io/scRNA.seq.datasets/'>collection of scRNA-seq datasets</a>.</p>"),
+                   
                    HTML("</div></div>")
                )
         )
     })
     
-    observe({
-        if(input$data_type == "existing") {
-            if(!is.null(input$ref_type)) {
-                if(input$ref_type == "pancreas") {
-                    values$reference_file <- paste0("refs/", input$refs_pancreas)
-                } else {
-                    values$reference_file <- paste0("refs/", input$refs_embryo)
-                }
-            }
-        } else {
-            values$reference_file <- input$reference$datapath
-        }
+    
+    output$features <- renderUI({
+        if (is.null(input$data_type))
+            return()
+        
+        # Depending on input$input_type, we'll generate a different
+        # UI component and send it to the client.
+        switch(input$data_type,
+               "own" = list(
+                   fluidRow(
+                       box(width = 12,
+                           title = "Notes",
+                           HTML("<p class = 'lead'>To select the most informative features for further projection of the datasets <b>scmap</b> utilizes a modification of the <a href = 'http://biorxiv.org/content/early/2017/05/25/065094'>M3Drop method</a>. 
+                                A linear model is fitted to the log(expression) 
+                                vs log(dropout) distribution of points. After fitting a linear 
+                                model important features are selected as the top <em>N</em> (200, 500, 1000) positive residuals 
+                                of the linear model.</p>
+                                <p class = 'lead'>The plot below is interactive, please use your mouse to see the names of the selected features.</p>"),
+                           solidHeader = TRUE,
+                           status = "warning"
+                           ),
+                       box(width = 10,
+                           title = "Features (genes/transcripts)",
+                           HTML("<div class='panel panel-primary'>
+                                <div class='panel-heading'>Number of selected features:</div>
+                                <div class='panel-body'>"),
+                           radioButtons("n_features",
+                                        NULL,
+                                        choices = c("200", "500", "1000"),
+                                        selected = "500",
+                                        inline = TRUE),
+                           HTML("</div></div>"),
+                           plotlyOutput("ref_features"),
+                           solidHeader = TRUE
+                           # status = "primary"
+                           )
+                       )
+                   ),
+               "existing" = list(
+                   fluidRow(
+                       box(width = 12,
+                           title = "Notes",
+                           HTML("
+                                <p class='lead'>Each dataset in the Reference contains 500 most informative features (pre-calculated).
+                                Each cell type is represented by it's median expression across all cells. Please go
+                                to the <b>Results</b> tab next.</p>"),
+                           solidHeader = TRUE,
+                           status = "primary"
+                       )
+                   )
+               )
+        )
     })
+    
+    output$results <- renderUI({
+        if (is.null(input$data_type))
+            return()
+        
+        # Depending on input$input_type, we'll generate a different
+        # UI component and send it to the client.
+        switch(input$data_type,
+               "own" = list(
+                   fluidRow(
+                       box(width = 6,
+                           title = "Sankey diagram",
+                           HTML("<br>"),
+                           uiOutput('mapping_uns'),
+                           uiOutput('mapping_sank'),
+                           htmlOutput("sankey"),
+                           HTML("<br>"),
+                           downloadButton('download_mapping', 'Download Results'),
+                           solidHeader = TRUE,
+                           status = "primary"
+                       )
+                   )
+               ),
+               "existing" = list(
+                   fluidRow(
+                       box(width = 12,
+                           title = "Human Pancreas",
+                           HTML("
+                                <p>More information about the datasets is available <a href='https://hemberg-lab.github.io/scRNA.seq.datasets/human/pancreas/' target='_blank'>here</a>.</p>"),
+                           # uiOutput("plots"),
+                           solidHeader = TRUE,
+                           status = "success"
+                           )
+                   ),
+                   fluidRow(
+                       box(width = 6,
+                           title = "Baron",
+                           uiOutput('baron-human.txt-uns'),
+                           uiOutput('baron-human.txt-sank'),
+                           uiOutput("human_pancreas_baron"),
+                           HTML("<br>"),
+                           downloadButton('baron-human.txt', 'Download Results'),
+                           solidHeader = TRUE,
+                           status = "primary"
+                       ),
+                       box(width = 6,
+                           title = "Muraro",
+                           uiOutput('muraro.txt-uns'),
+                           uiOutput('muraro.txt-sank'),
+                           uiOutput("human_pancreas_muraro"),
+                           HTML("<br>"),
+                           downloadButton('muraro.txt', 'Download Results'),
+                           solidHeader = TRUE,
+                           status = "primary"
+                       )
+                   ),
+                   fluidRow(
+                       box(width = 6,
+                           title = "Segerstolpe",
+                           uiOutput('segerstolpe.txt-uns'),
+                           uiOutput('segerstolpe.txt-sank'),
+                           uiOutput("human_pancreas_segerstolpe"),
+                           HTML("<br>"),
+                           downloadButton('segerstolpe.txt', 'Download Results'),
+                           solidHeader = TRUE,
+                           status = "primary"
+                       ),
+                       box(width = 6,
+                           title = "Xin",
+                           uiOutput('xin.txt-uns'),
+                           uiOutput('xin.txt-sank'),
+                           uiOutput("human_pancreas_xin"),
+                           HTML("<br>"),
+                           downloadButton('xin.txt', 'Download Results'),
+                           solidHeader = TRUE,
+                           status = "primary"
+                       )
+                   ),
+                   fluidRow(
+                       box(width = 12,
+                           title = "Human Tissues",
+                           HTML("
+                                <p>More information about the datasets is available <a href='https://hemberg-lab.github.io/scRNA.seq.datasets/human/tissues/' target='_blank'>here</a>.</p>"),
+                           solidHeader = TRUE,
+                           status = "success"
+                           )
+                   ),
+                   fluidRow(
+                       box(width = 6,
+                           title = "Li",
+                           uiOutput('li.txt-uns'),
+                           uiOutput('li.txt-sank'),
+                           uiOutput("human_tissues_li"),
+                           HTML("<br>"),
+                           downloadButton('li.txt', 'Download Results'),
+                           solidHeader = TRUE,
+                           status = "primary"
+                       ),
+                       box(width = 6,
+                           title = "Pollen",
+                           uiOutput('pollen.txt-uns'),
+                           uiOutput('pollen.txt-sank'),
+                           uiOutput("human_tissues_pollen"),
+                           HTML("<br>"),
+                           downloadButton('pollen.txt', 'Download Results'),
+                           solidHeader = TRUE,
+                           status = "primary"
+                       )
+                   ),
+                   fluidRow(
+                       box(width = 12,
+                           title = "Mouse Brain",
+                           HTML("
+                                <p>More information about the datasets is available <a href='https://hemberg-lab.github.io/scRNA.seq.datasets/mouse/brain/' target='_blank'>here</a>.</p>"),
+                           solidHeader = TRUE,
+                           status = "success"
+                           )
+                   ),
+                   fluidRow(
+                       box(width = 6,
+                           title = "Tasic (reads)",
+                           uiOutput('tasic-reads.txt-uns'),
+                           uiOutput('tasic-reads.txt-sank'),
+                           uiOutput("mouse_brain_tasic_reads"),
+                           HTML("<br>"),
+                           downloadButton('tasic-reads.txt', 'Download Results'),
+                           solidHeader = TRUE,
+                           status = "primary"
+                       ),
+                       box(width = 6,
+                           title = "Tasic (rpkms)",
+                           uiOutput('tasic-rpkms.txt-uns'),
+                           uiOutput('tasic-rpkms.txt-sank'),
+                           uiOutput("mouse_brain_tasic_rpkms"),
+                           HTML("<br>"),
+                           downloadButton('tasic-rpkms.txt', 'Download Results'),
+                           solidHeader = TRUE,
+                           status = "primary"
+                       )
+                   ),
+                   fluidRow(
+                       box(width = 6,
+                           title = "Usoskin",
+                           uiOutput('usoskin.txt-uns'),
+                           uiOutput('usoskin.txt-sank'),
+                           uiOutput("mouse_brain_usoskin"),
+                           HTML("<br>"),
+                           downloadButton('usoskin.txt', 'Download Results'),
+                           solidHeader = TRUE,
+                           status = "primary"
+                       ),
+                       box(width = 6,
+                           title = "Zeisel",
+                           uiOutput('zeisel.txt-uns'),
+                           uiOutput('zeisel.txt-sank'),
+                           uiOutput("mouse_brain_zeisel"),
+                           HTML("<br>"),
+                           downloadButton('zeisel.txt', 'Download Results'),
+                           solidHeader = TRUE,
+                           status = "primary"
+                       )
+                   ),
+                   fluidRow(
+                       box(width = 12,
+                           title = "Mouse Retina",
+                           HTML("
+                                <p>More information about the datasets is available <a href='https://hemberg-lab.github.io/scRNA.seq.datasets/mouse/retina/' target='_blank'>here</a>.</p>"),
+                           solidHeader = TRUE,
+                           status = "success"
+                       )
+                   ),
+                   fluidRow(
+                       box(width = 6,
+                           title = "Macosko",
+                           uiOutput('macosko.txt-uns'),
+                           uiOutput('macosko.txt-sank'),
+                           uiOutput("mouse_retina_macosko"),
+                           HTML("<br>"),
+                           downloadButton('macosko.txt', 'Download Results'),
+                           solidHeader = TRUE,
+                           status = "primary"
+                       ),
+                       box(width = 6,
+                           title = "Shekhar",
+                           uiOutput('shekhar.txt-uns'),
+                           uiOutput('shekhar.txt-sank'),
+                           uiOutput("mouse_retina_shekhar"),
+                           HTML("<br>"),
+                           downloadButton('shekhar.txt', 'Download Results'),
+                           solidHeader = TRUE,
+                           status = "primary"
+                       )
+                   ),
+                   fluidRow(
+                       box(width = 12,
+                           title = "Mouse Pancreas",
+                           HTML("
+                                <p>More information about the datasets is available <a href='https://hemberg-lab.github.io/scRNA.seq.datasets/mouse/pancreas/' target='_blank'>here</a>.</p>"),
+                           # uiOutput("plots"),
+                           solidHeader = TRUE,
+                           status = "success"
+                           )
+                   ),
+                   fluidRow(
+                       box(width = 6,
+                           title = "Baron",
+                           uiOutput('baron-mouse.txt-uns'),
+                           uiOutput('baron-mouse.txt-sank'),
+                           uiOutput("mouse_pancreas_baron"),
+                           HTML("<br>"),
+                           downloadButton('baron-mouse.txt', 'Download Results'),
+                           solidHeader = TRUE,
+                           status = "primary"
+                       )
+                   ),
+                   fluidRow(
+                       box(width = 12,
+                           title = "Mouse Retina",
+                           HTML("
+                                <p>More information about the datasets is available <a href='https://hemberg-lab.github.io/scRNA.seq.datasets/mouse/esc/' target='_blank'>here</a>.</p>"),
+                           solidHeader = TRUE,
+                           status = "success"
+                           )
+                   ),
+                   fluidRow(
+                       box(width = 6,
+                           title = "Klein",
+                           uiOutput('klein.txt-uns'),
+                           uiOutput('klein.txt-sank'),
+                           uiOutput("mouse_embryo_stem_cell_klein"),
+                           HTML("<br>"),
+                           downloadButton('klein.txt', 'Download Results'),
+                           solidHeader = TRUE,
+                           status = "primary"
+                       ),
+                       box(width = 6,
+                           title = "Kolodziejczyk",
+                           uiOutput('kolodziejczyk.txt-uns'),
+                           uiOutput('kolodziejczyk.txt-sank'),
+                           uiOutput("mouse_embryo_stem_cell_kolodziejczyk"),
+                           HTML("<br>"),
+                           downloadButton('kolodziejczyk.txt', 'Download Results'),
+                           solidHeader = TRUE,
+                           status = "primary"
+                       )
+                   ),
+                   fluidRow(
+                       box(width = 12,
+                           title = "Mouse Embryo Development",
+                           HTML("
+                                <p>More information about the datasets is available <a href='https://hemberg-lab.github.io/scRNA.seq.datasets/mouse/edev/' target='_blank'>here</a>.</p>"),
+                           solidHeader = TRUE,
+                           status = "success"
+                           )
+                   ),
+                   fluidRow(
+                       box(width = 6,
+                           title = "Deng (reads)",
+                           uiOutput('deng-reads.txt-uns'),
+                           uiOutput('deng-reads.txt-sank'),
+                           uiOutput("mouse_embryo_devel_deng_reads"),
+                           HTML("<br>"),
+                           downloadButton('deng-reads.txt', 'Download Results'),
+                           solidHeader = TRUE,
+                           status = "primary"
+                       ),
+                       box(width = 6,
+                           title = "Deng (rpkms)",
+                           uiOutput('deng-rpkms.txt-uns'),
+                           uiOutput('deng-rpkms.txt-sank'),
+                           uiOutput("mouse_embryo_devel_deng_rpkms"),
+                           HTML("<br>"),
+                           downloadButton('deng-rpkms.txt', 'Download Results'),
+                           solidHeader = TRUE,
+                           status = "primary"
+                       )
+                   ),
+                   fluidRow(
+                       box(width = 12,
+                           title = "Mouse Hematopoietic Stem Cells",
+                           HTML("
+                                <p>More information about the datasets is available <a href='https://hemberg-lab.github.io/scRNA.seq.datasets/mouse/hsc/' target='_blank'>here</a>.</p>"),
+                           solidHeader = TRUE,
+                           status = "success"
+                           )
+                   ),
+                   fluidRow(
+                       box(width = 6,
+                           title = "Nestorowa",
+                           uiOutput('nestorowa.txt-uns'),
+                           uiOutput('nestorowa.txt-sank'),
+                           uiOutput("mouse_hematopoietic_stem_cells_nestorowa"),
+                           HTML("<br>"),
+                           downloadButton('nestorowa.txt', 'Download Results'),
+                           solidHeader = TRUE,
+                           status = "primary"
+                       )
+                   )
+               )
+          )
+    })
+    
+    output$human_pancreas_baron <- renderGvis({
+        withProgress(message = 'Projecting to Baron (human)', {
+            incProgress()
+            get_sankey_ref("baron-human.txt")
+        })
+    })
+    
+    output$mouse_pancreas_baron <- renderGvis({
+        withProgress(message = 'Projecting to Baron (mouse)', {
+            incProgress()
+            get_sankey_ref("baron-mouse.txt")
+        })
+    })
+    
+    output$mouse_embryo_devel_deng_reads <- renderGvis({
+        withProgress(message = 'Projecting to Deng (reads)', {
+            incProgress()
+            get_sankey_ref("deng-reads.txt")
+        })
+    })
+    
+    output$mouse_embryo_devel_deng_rpkms <- renderGvis({
+        withProgress(message = 'Projecting to Deng (rpkms)', {
+            incProgress()
+            get_sankey_ref("deng-rpkms.txt")
+        })
+    })
+    
+    output$mouse_embryo_stem_cell_klein <- renderGvis({
+        withProgress(message = 'Projecting to Klein', {
+            incProgress()
+            get_sankey_ref("klein.txt")
+        })
+    })
+    
+    output$mouse_embryo_stem_cell_kolodziejczyk <- renderGvis({
+        withProgress(message = 'Projecting to Kolodziejczyk', {
+            incProgress()
+            get_sankey_ref("kolodziejczyk.txt")
+        })
+    })
+    
+    output$human_tissues_li <- renderGvis({
+        withProgress(message = 'Projecting to Li', {
+            incProgress()
+            get_sankey_ref("li.txt")
+        })
+    })
+    
+    output$mouse_retina_macosko <- renderGvis({
+        withProgress(message = 'Projecting to Macosko', {
+            incProgress()
+            get_sankey_ref("macosko.txt")
+        })
+    })
+    
+    output$human_pancreas_muraro <- renderGvis({
+        withProgress(message = 'Projecting to Muraro', {
+            incProgress()
+            get_sankey_ref("muraro.txt")
+        })
+    })
+    
+    output$mouse_hematopoietic_stem_cells_nestorowa <- renderGvis({
+        withProgress(message = 'Projecting to Nestorowa', {
+            incProgress()
+            get_sankey_ref("nestorowa.txt")
+        })
+    })
+    
+    output$human_tissues_pollen <- renderGvis({
+        withProgress(message = 'Projecting to Pollen', {
+            incProgress()
+            get_sankey_ref("pollen.txt")
+        })
+    })
+    
+    output$human_pancreas_segerstolpe <- renderGvis({
+        withProgress(message = 'Projecting to Segerstolpe', {
+            incProgress()
+            get_sankey_ref("segerstolpe.txt")
+        })
+    })
+    
+    output$mouse_retina_shekhar <- renderGvis({
+        withProgress(message = 'Projecting to Shekhar', {
+            incProgress()
+            get_sankey_ref("shekhar.txt")
+        })
+    })
+    
+    output$mouse_brain_tasic_reads <- renderGvis({
+        withProgress(message = 'Projecting to Tasic (reads)', {
+            incProgress()
+            get_sankey_ref("tasic-reads.txt")
+        })
+    })
+    
+    output$mouse_brain_tasic_rpkms <- renderGvis({
+        withProgress(message = 'Projecting to Tasic (rpkms)', {
+            incProgress()
+            get_sankey_ref("tasic-rpkms.txt")
+        })
+    })
+    
+    output$mouse_brain_usoskin <- renderGvis({
+        withProgress(message = 'Projecting to Usoskin', {
+            incProgress()
+            get_sankey_ref("usoskin.txt")
+        })
+    })
+    
+    output$human_pancreas_xin <- renderGvis({
+        withProgress(message = 'Projecting to Xin', {
+            incProgress()
+            get_sankey_ref("xin.txt")
+        })
+    })
+    
+    output$mouse_brain_zeisel <- renderGvis({
+        withProgress(message = 'Projecting to Zeisel', {
+            incProgress()
+            get_sankey_ref("zeisel.txt")
+        })
+    })
+    
+    observe({
+        values$reference_file <- input$reference$datapath
+        # download buttons
+        lapply(refs, function(i) {
+            output[[i]] <- downloadHandler(
+                filename = function() {
+                    paste0('scmap_projection_to_', strsplit(i, "\\.")[[1]][1], '.csv')
+                },
+                content = function(con) {
+                    write.csv(values[[i]], con, quote = FALSE, row.names = FALSE)
+                }
+            )
+            output[[paste0(i, "-uns")]] <- renderUI(
+                HTML(values[[paste0(i, "-uns")]])
+            )
+            output[[paste0(i, "-sank")]] <- renderUI(
+                HTML(values[[paste0(i, "-sank")]])
+            )
+        })
+    })
+    
+    output$mapping_uns <- renderUI(
+        HTML(values$mapping_uns)
+    )
+    output$mapping_sank <- renderUI(
+        HTML(values$mapping_sank)
+    )
     
     output$sankey <- renderGvis({
         withProgress(message = 'Making plot', {
