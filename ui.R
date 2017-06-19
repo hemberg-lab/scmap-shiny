@@ -84,28 +84,29 @@ dashboardPage(
                 fluidRow(
                     box(width = 6,
                         title = "Reference",
-                        HTML("<div class='panel panel-primary'>
-                                <div class='panel-heading'>What would like to do?</div>
-                                <div class='panel-body'>"),
-                        radioButtons("data_type", NULL,
-                                    c("Upload your own dataset" = "own",
-                                      "Use existing Reference" = "existing"),
-                                    selected = "own"),
-                        HTML("</div></div>"),
+                        box(width = 12,
+                            HTML("<p class='lead'>What would like to do?</p>"),
+                            radioButtons("data_type", NULL,
+                                        c("Upload your own dataset" = "own",
+                                          "Use existing Reference" = "existing"),
+                                        selected = "own"),
+                            solidHeader = TRUE,
+                            status = "primary"
+                        ),
                         uiOutput("datasets"),
-                        solidHeader = TRUE
-                        # status = "primary"
+                        solidHeader = TRUE,
+                        status = "primary"
                     ),
                     box(width = 6,
                         title = "Projection",
-                        HTML("<div class='panel panel-primary'>
-                                <div class='panel-heading'>Select an <b>.rds</b> file containing data in <a href = 'http://bioconductor.org/packages/scater'>scater</a> format (<a href='https://scrnaseq-public-datasets.s3.amazonaws.com/scater-objects/segerstolpe.rds'>example</a>)</div>
-                             
-                             <div class='panel-body'>"),
-                        fileInput('to_project', NULL, accept=c('.rds')),
-                        HTML("</div></div>"),
-                        solidHeader = TRUE
-                        # status = "primary"
+                        box(width = 12,
+                            HTML("<p class='lead'>Select an <b>.rds</b> file containing data in <a href = 'http://bioconductor.org/packages/scater'>scater</a> format (<a href='https://scrnaseq-public-datasets.s3.amazonaws.com/scater-objects/segerstolpe.rds'>example</a>)</p>"),
+                            fileInput('to_project', NULL, accept=c('.rds')),
+                            solidHeader = TRUE,
+                            status = "primary"
+                        ),
+                        solidHeader = TRUE,
+                        status = "primary"
                     )
                 )
             ),

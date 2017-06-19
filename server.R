@@ -124,23 +124,21 @@ server <- function(input, output) {
         # UI component and send it to the client.
         switch(input$data_type,
                "own" = list(
-                   HTML("<div class='panel panel-primary'>
-                            <div class='panel-heading'>Select an <b>.rds</b> file containing data in <a href = 'http://bioconductor.org/packages/scater'>scater</a> format (<a href='https://scrnaseq-public-datasets.s3.amazonaws.com/scater-objects/muraro.rds'>example</a>)</div>
-                            <div class='panel-body'>
-                        "),
-                   fileInput('reference', NULL, accept=c('.rds')),
-                   HTML("</div></div>")
+                   box(width = 12,
+                       HTML("<p class='lead'>Select an <b>.rds</b> file containing data in <a href = 'http://bioconductor.org/packages/scater'>scater</a> format (<a href='https://scrnaseq-public-datasets.s3.amazonaws.com/scater-objects/muraro.rds'>example</a>)</p>"),
+                        fileInput('reference', NULL, accept=c('.rds')),
+                       solidHeader = TRUE,
+                       status = "primary"
+                   )
                ),
                "existing" = list(
-                   HTML("<div class='panel panel-primary'>
-                            <div class='panel-heading'>Existing Reference</div>
-                            <div class='panel-body'>
-                        "),
-                   HTML("<p class='text-warning'>Your data will be projected to all datasets in our Reference.
-                         For more details of the Reference please visit
-                         our <a href='https://hemberg-lab.github.io/scRNA.seq.datasets/'>collection of scRNA-seq datasets</a>.</p>"),
-                   
-                   HTML("</div></div>")
+                   box(width = 12,
+                       HTML("<p class='text-warning'><p class='lead'>Your data will be projected to all datasets in our Reference.
+                             For more details of the Reference please visit
+                             our <a href='https://hemberg-lab.github.io/scRNA.seq.datasets/'>collection of scRNA-seq datasets</a>.</p></p>"),
+                       solidHeader = TRUE,
+                       status = "primary"
+                   )
                )
         )
     })
