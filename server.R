@@ -71,6 +71,9 @@ server <- function(input, output) {
     }
     
     get_sankey_ref <- function(ref) {
+        # reset the unassigned rate message
+        values[[paste0(ref, "-uns")]] <- NULL
+        
         validate(need(
             input$to_project$datapath,
             "Please upload your Projection dataset first!"
@@ -637,10 +640,14 @@ server <- function(input, output) {
                 }
             )
             output[[paste0(i, "-uns")]] <- renderUI(
-                HTML(values[[paste0(i, "-uns")]])
+                if (!is.null(values[[paste0(i, "-uns")]])) {
+                    HTML(values[[paste0(i, "-uns")]])
+                }
             )
             output[[paste0(i, "-sank")]] <- renderUI(
-                HTML(values[[paste0(i, "-sank")]])
+                if (!is.null(values[[paste0(i, "-uns")]])) {
+                    HTML(values[[paste0(i, "-sank")]])
+                }
             )
         })
     })
