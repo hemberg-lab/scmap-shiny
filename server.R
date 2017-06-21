@@ -66,8 +66,6 @@ server <- function(input, output) {
         # reset the unassigned rate message
         values[[paste0(ref, "-uns")]] <- NULL
         
-        print(ref)
-        
         ref_data <- read.table(paste0("refs/", ref), check.names = FALSE, sep = "\t")
         scmap_map <- readRDS(input$to_project$datapath)
         
@@ -614,7 +612,6 @@ your <b>Projection</b> dataset.</p>
     
     observe({
         values$reference_file <- input$reference$datapath
-        print(values$projection_file)
         # download buttons
         lapply(refs, function(i) {
             output[[i]] <- downloadHandler(
