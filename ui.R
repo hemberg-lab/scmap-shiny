@@ -14,11 +14,20 @@ dashboardPage(
     skin = "black",
     dashboardHeader(title = "scmap"),
     dashboardSidebar(
-        sidebarMenu(
-            menuItem("About", tabName = "about", icon = icon("bank")),
-            menuItem("Datasets", tabName = "refs", icon = icon("cloud-upload")),
-            menuItem("Features", tabName = "ref_overview", icon = icon("gears")),
-            menuItem("Results", tabName = "results", icon = icon("area-chart"))
+        conditionalPanel("input.data_type == 'own'", 
+            sidebarMenu(
+                menuItem("About", tabName = "about", icon = icon("bank")),
+                menuItem("Datasets", tabName = "refs", icon = icon("cloud-upload")),
+                menuItem("Features", tabName = "ref_overview", icon = icon("gears")),
+                menuItem("Results", tabName = "results", icon = icon("area-chart"))
+            )
+        ),
+        conditionalPanel("input.data_type == 'existing'", 
+             sidebarMenu(
+                 menuItem("About", tabName = "about", icon = icon("bank")),
+                 menuItem("Datasets", tabName = "refs", icon = icon("cloud-upload")),
+                menuItem("Results", tabName = "results", icon = icon("area-chart"))
+            )
         )
     ),
     dashboardBody(
@@ -82,6 +91,22 @@ dashboardPage(
             
             tabItem(tabName = "refs",
                 fluidRow(
+                    box(width = 12,
+                        title = "Organism",
+                        box(width = 12,
+                            HTML("<p class='lead'>Which organism is your data from?</p>"),
+                            radioButtons("organism", NULL,
+                                         c("Human" = "human",
+                                           "Mouse" = "mouse"),
+                                         selected = "human"),
+                            solidHeader = TRUE,
+                            status = "primary"
+                        ),
+                        solidHeader = TRUE,
+                        status = "primary"
+                    )
+                ),
+                fluidRow(
                     box(width = 6,
                         title = "Reference",
                         box(width = 12,
@@ -111,7 +136,50 @@ dashboardPage(
                 )
             ),
             tabItem(tabName = "ref_overview",
-                uiOutput("features")
+                    conditionalPanel("output.reference_dataset",
+                    fluidRow(
+                        box(width = 12,
+                            title = "Notes",
+                            HTML("<p class = 'lead'>To select the most informative features for further projection of the datasets <b>scmap</b> utilizes a modification of the <a href = 'http://biorxiv.org/content/early/2017/05/25/065094'>M3Drop method</a>. 
+                                 A linear model is fitted to the log(expression) 
+                                 vs log(dropout) distribution of points. After fitting a linear 
+                                 model important features are selected as the top <em>N</em> (200, 500, 1000) positive residuals 
+                                 of the linear model.</p>
+                                 <p class = 'lead'>The plot below is interactive, please use your mouse to see the names of the selected features.</p>"),
+                            solidHeader = TRUE,
+                            status = "warning"
+                            ),
+                        box(width = 10,
+                            title = "Features (genes/transcripts)",
+                            HTML("<div class='panel panel-primary'>
+                                 <div class='panel-heading'>Number of selected features:</div>
+                                 <div class='panel-body'>"),
+                            radioButtons("n_features",
+                                         NULL,
+                                         choices = c("200", "500", "1000"),
+                                         selected = "500",
+                                         inline = TRUE),
+                            HTML("</div></div>"),
+                            plotlyOutput("ref_features"),
+                            solidHeader = TRUE
+                            # status = "primary"
+                            )
+                        )
+                    ),
+                    conditionalPanel("!output.reference_dataset",
+                             fluidRow(
+                                 column(width = 10,
+                                        HTML("
+<br><br>
+<div class='alert alert-dismissible alert-warning'>
+<p class = 'lead'>Looks like you forgot to upload a dataset that you want to 
+use as a <b>Reference</b>. Please go back to the <em>Datasets</em> tab and upload 
+your dataset.</p>
+</div>"),
+                                        offset = 1
+                                        )
+                                 )
+                    )
             ),
             tabItem(tabName = "results",
                 uiOutput("results")

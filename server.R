@@ -23,14 +23,6 @@ values <- reactiveValues()
 server <- function(input, output) {
     
     get_sankey <- function() {
-        validate(need(
-            values$reference_file,
-            "\nPlease upload your Reference dataset first!"
-        ))
-        validate(need(
-            input$to_project$datapath,
-            "\nPlease upload your Projection dataset first!"
-        ))
         scmap_map <- readRDS(input$to_project$datapath)
         
         scmap_ref <- readRDS(values$reference_file)
@@ -73,11 +65,6 @@ server <- function(input, output) {
     get_sankey_ref <- function(ref) {
         # reset the unassigned rate message
         values[[paste0(ref, "-uns")]] <- NULL
-        
-        validate(need(
-            input$to_project$datapath,
-            "Please upload your Projection dataset first!"
-        ))
         
         print(ref)
         
@@ -136,65 +123,11 @@ server <- function(input, output) {
                ),
                "existing" = list(
                    box(width = 12,
-                       HTML("<p class='text-warning'><p class='lead'>Your data will be projected to all datasets in our Reference.
+                       HTML("<p class='lead text-warning'>Your data will be projected to all datasets in our Reference.
                              For more details of the Reference please visit
-                             our <a href='https://hemberg-lab.github.io/scRNA.seq.datasets/'>collection of scRNA-seq datasets</a>.</p></p>"),
+                             our <a href='https://hemberg-lab.github.io/scRNA.seq.datasets/'>collection of scRNA-seq datasets</a>.</p>"),
                        solidHeader = TRUE,
                        status = "primary"
-                   )
-               )
-        )
-    })
-    
-    
-    output$features <- renderUI({
-        if (is.null(input$data_type))
-            return()
-        
-        # Depending on input$input_type, we'll generate a different
-        # UI component and send it to the client.
-        switch(input$data_type,
-               "own" = list(
-                   fluidRow(
-                       box(width = 12,
-                           title = "Notes",
-                           HTML("<p class = 'lead'>To select the most informative features for further projection of the datasets <b>scmap</b> utilizes a modification of the <a href = 'http://biorxiv.org/content/early/2017/05/25/065094'>M3Drop method</a>. 
-                                A linear model is fitted to the log(expression) 
-                                vs log(dropout) distribution of points. After fitting a linear 
-                                model important features are selected as the top <em>N</em> (200, 500, 1000) positive residuals 
-                                of the linear model.</p>
-                                <p class = 'lead'>The plot below is interactive, please use your mouse to see the names of the selected features.</p>"),
-                           solidHeader = TRUE,
-                           status = "warning"
-                           ),
-                       box(width = 10,
-                           title = "Features (genes/transcripts)",
-                           HTML("<div class='panel panel-primary'>
-                                <div class='panel-heading'>Number of selected features:</div>
-                                <div class='panel-body'>"),
-                           radioButtons("n_features",
-                                        NULL,
-                                        choices = c("200", "500", "1000"),
-                                        selected = "500",
-                                        inline = TRUE),
-                           HTML("</div></div>"),
-                           plotlyOutput("ref_features"),
-                           solidHeader = TRUE
-                           # status = "primary"
-                           )
-                       )
-                   ),
-               "existing" = list(
-                   fluidRow(
-                       box(width = 12,
-                           title = "Notes",
-                           HTML("
-                                <p class='lead'>Each dataset in the Reference contains 500 most informative features (pre-calculated).
-                                Each cell type is represented by it's median expression across all cells. Please go
-                                to the <b>Results</b> tab next.</p>"),
-                           solidHeader = TRUE,
-                           status = "primary"
-                       )
                    )
                )
         )
@@ -208,21 +141,55 @@ server <- function(input, output) {
         # UI component and send it to the client.
         switch(input$data_type,
                "own" = list(
-                   fluidRow(
-                       box(width = 6,
-                           title = "Sankey diagram",
-                           HTML("<br>"),
-                           uiOutput('mapping_uns'),
-                           uiOutput('mapping_sank'),
-                           htmlOutput("sankey"),
-                           HTML("<br>"),
-                           downloadButton('download_mapping', 'Download Results'),
-                           solidHeader = TRUE,
-                           status = "primary"
+                   conditionalPanel("output.reference_dataset",
+                       conditionalPanel("output.projection_dataset",
+                       fluidRow(
+                           box(width = 6,
+                               title = "Sankey diagram",
+                               HTML("<br>"),
+                               uiOutput('mapping_uns'),
+                               uiOutput('mapping_sank'),
+                               htmlOutput("sankey"),
+                               HTML("<br>"),
+                               downloadButton('download_mapping', 'Download Results'),
+                               solidHeader = TRUE,
+                               status = "primary"
+                           )
                        )
+                       ),
+                       conditionalPanel("!output.projection_dataset",
+                            fluidRow(
+                                column(width = 10,
+                                       HTML("
+<br><br>
+<div class='alert alert-dismissible alert-warning'>
+<p class = 'lead'>Looks like you forgot to upload a dataset that you want to 
+project to the Reference. Please go back to the <em>Datasets</em> tab and upload 
+your <b>Projection</b> dataset.</p>
+</div>"),
+                                       offset = 1
+                                       )
+                                )
+                       )
+                   ),
+                   conditionalPanel("!output.reference_dataset",
+                                    fluidRow(
+                                        column(width = 10,
+                                               HTML("
+<br><br>
+<div class='alert alert-dismissible alert-warning'>
+<p class = 'lead'>Looks like you forgot to upload a dataset that you want to 
+use as a <b>Reference</b>. Please go back to the <em>Datasets</em> tab and upload 
+your dataset.</p>
+</div>"),
+                                               offset = 1
+                                        )
+                                    )
                    )
                ),
                "existing" = list(
+                   conditionalPanel("output.projection_dataset",
+                   conditionalPanel("input.organism == 'human'",
                    fluidRow(
                        box(width = 12,
                            title = "Human Pancreas",
@@ -307,7 +274,9 @@ server <- function(input, output) {
                            solidHeader = TRUE,
                            status = "primary"
                        )
+                   )
                    ),
+                   conditionalPanel("input.organism == 'mouse'",
                    fluidRow(
                        box(width = 12,
                            title = "Mouse Brain",
@@ -497,6 +466,22 @@ server <- function(input, output) {
                            status = "primary"
                        )
                    )
+                   )
+                   ),
+                   conditionalPanel("!output.projection_dataset",
+                                    fluidRow(
+                                        column(width = 10,
+                                            HTML("
+<br><br>
+<div class='alert alert-dismissible alert-warning'>
+<p class = 'lead'>Looks like you forgot to upload a dataset that you want to 
+project to the Reference. Please go back to the <em>Datasets</em> tab and upload 
+your <b>Projection</b> dataset.</p>
+</div>"),
+                                            offset = 1
+                                        )
+                                    )
+                   )
                )
           )
     })
@@ -629,6 +614,7 @@ server <- function(input, output) {
     
     observe({
         values$reference_file <- input$reference$datapath
+        print(values$projection_file)
         # download buttons
         lapply(refs, function(i) {
             output[[i]] <- downloadHandler(
@@ -650,6 +636,14 @@ server <- function(input, output) {
                 }
             )
         })
+    })
+    
+    output$reference_dataset <- reactive({
+        !is.null(input$reference$datapath)
+    })
+    
+    output$projection_dataset <- reactive({
+        !is.null(input$to_project$datapath)
     })
     
     output$mapping_uns <- renderUI(
@@ -691,4 +685,6 @@ server <- function(input, output) {
       }
     )
 
+    outputOptions(output, "projection_dataset", suspendWhenHidden = FALSE)
+    outputOptions(output, "reference_dataset", suspendWhenHidden = FALSE)
 }
