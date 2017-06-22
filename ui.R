@@ -7,7 +7,6 @@
 
 library(shinydashboard)
 library(shiny)
-library(plotly)
 
 ui <- tagList( 
 dashboardPage(
@@ -60,10 +59,10 @@ dashboardPage(
                         box(width = 12,
                             title = "Links",
                             HTML("
-                                 <p class = 'lead'>A copy of the <b>scmap</b> manuscript is available on <a href = 'https://doi.org/10.1101/150292'>bioRxiv</a>.<br>
-                                 An R package containing <b>scmap</b> source code is available on <a href = 'https://github.com/hemberg-lab/scmap'>GitHub</a>.<br>
-                                 More information about the existing Reference can be found <a href = 'https://hemberg-lab.github.io/scRNA.seq.datasets/'>here</a>.<br>
-                                 Please send your feedback/comments/suggestions to <a href='mailto:vladimir.yu.kiselev@gmail.com'>Vladimir Kiselev</a>.</p>
+                                 <p class = 'lead'>A copy of the <b>scmap</b> manuscript is available on <a href = 'https://doi.org/10.1101/150292' target='_blank'>bioRxiv</a>.<br>
+                                 An R package containing <b>scmap</b> source code is available on <a href = 'https://github.com/hemberg-lab/scmap' target='_blank'>GitHub</a>.<br>
+                                 More information about the existing Reference can be found <a href = 'https://hemberg-lab.github.io/scRNA.seq.datasets/' target='_blank'>here</a>.<br>
+                                 Please send your feedback/comments/suggestions to <a href='mailto:vladimir.yu.kiselev@gmail.com' target='_blank'>Vladimir Kiselev</a>.</p>
                                  "),
                             solidHeader = TRUE,
                             status = "primary"
@@ -72,16 +71,16 @@ dashboardPage(
                             title = "Notes",
                             # background = "navy",
                             HTML("
-                                 <p class = 'lead'><b>scmap</b> is based on <a href = 'https://doi.org/10.1093/bioinformatics/btw777'>scater</a>
+                                 <p class = 'lead'><b>scmap</b> is based on <a href = 'https://doi.org/10.1093/bioinformatics/btw777' target='_blank'>scater</a>
                                  format. Please make yourself familiar with it before running <b>scmap</b>.</p>
                                  <p class = 'lead'><b><em>phenoData</em></b> slot of 
                                  the Reference dataset must have the <b><em>cell_type1</em></b> 
                                  column which contains cell type labels.
                                  
                                  <p class = 'lead'><b><em>featureData</em></b> 
-                                 slot of the Projection dataset must have the 
+                                 slots of both the Reference and Projection dataset must have the 
                                  <b><em>feature_symbol</em></b> column which contains 
-                                 Feature (gene/transcript) names.</font></p>
+                                 Feature (gene/transcript) names from the same organism.</font></p>
                                  "),
                             solidHeader = TRUE,
                             status = "warning"
@@ -90,22 +89,6 @@ dashboardPage(
             ),
             
             tabItem(tabName = "refs",
-                fluidRow(
-                    box(width = 12,
-                        title = "Organism",
-                        box(width = 12,
-                            HTML("<p class='lead'>Which organism is your data from?</p>"),
-                            radioButtons("organism", NULL,
-                                         c("Human" = "human",
-                                           "Mouse" = "mouse"),
-                                         selected = "human"),
-                            solidHeader = TRUE,
-                            status = "primary"
-                        ),
-                        solidHeader = TRUE,
-                        status = "primary"
-                    )
-                ),
                 fluidRow(
                     box(width = 6,
                         title = "Reference",
@@ -125,10 +108,21 @@ dashboardPage(
                     box(width = 6,
                         title = "Projection",
                         box(width = 12,
-                            HTML("<p class='lead'>Select an <b>.rds</b> file containing data in <a href = 'http://bioconductor.org/packages/scater'>scater</a> format (<a href='https://scrnaseq-public-datasets.s3.amazonaws.com/scater-objects/segerstolpe.rds'>example</a>)</p>"),
+                            HTML("<p class='lead'>Select an <b>.rds</b> file containing data in <a href = 'http://bioconductor.org/packages/scater' target='_blank'>scater</a> format (<a href='https://scrnaseq-public-datasets.s3.amazonaws.com/scater-objects/segerstolpe.rds'>example</a>)</p>"),
                             fileInput('to_project', NULL, accept=c('.rds')),
                             solidHeader = TRUE,
                             status = "primary"
+                        ),
+                        conditionalPanel("input.data_type == 'existing'",
+                        box(width = 12,
+                            HTML("<p class='lead'>Which organism is your data from?</p>"),
+                            radioButtons("organism", NULL,
+                                         c("Human" = "human",
+                                           "Mouse" = "mouse"),
+                                         selected = "human"),
+                            solidHeader = TRUE,
+                            status = "primary"
+                        )
                         ),
                         solidHeader = TRUE,
                         status = "primary"
@@ -139,28 +133,17 @@ dashboardPage(
                     conditionalPanel("output.reference_dataset",
                     fluidRow(
                         box(width = 12,
-                            title = "Notes",
-                            HTML("<p class = 'lead'>To select the most informative features for further projection of the datasets <b>scmap</b> utilizes a modification of the <a href = 'http://biorxiv.org/content/early/2017/05/25/065094'>M3Drop method</a>. 
-                                 A linear model is fitted to the log(expression) 
-                                 vs log(dropout) distribution of points. After fitting a linear 
-                                 model important features are selected as the top <em>N</em> (200, 500, 1000) positive residuals 
-                                 of the linear model.</p>
-                                 <p class = 'lead'>The plot below is interactive, please use your mouse to see the names of the selected features.</p>"),
+                            title = "Feature selection",
+                            HTML("<p class = 'lead'><b>scmap</b> selects 500 most informative features (genes/transcripts) by
+                                 fitting a linear model to the <em>log(expression)</em> 
+                                 vs <em>log(dropout)</em> distribution of features.
+                                 The most informative genes are shown in red on the plot below. Conceptually,
+                                 these genes have a higher dropout rate for a given mean expression.</p>"),
                             solidHeader = TRUE,
-                            status = "warning"
+                            status = "primary"
                             ),
-                        box(width = 10,
-                            title = "Features (genes/transcripts)",
-                            HTML("<div class='panel panel-primary'>
-                                 <div class='panel-heading'>Number of selected features:</div>
-                                 <div class='panel-body'>"),
-                            radioButtons("n_features",
-                                         NULL,
-                                         choices = c("200", "500", "1000"),
-                                         selected = "500",
-                                         inline = TRUE),
-                            HTML("</div></div>"),
-                            plotlyOutput("ref_features"),
+                        box(width = 12,
+                            plotOutput("ref_features"),
                             solidHeader = TRUE
                             # status = "primary"
                             )

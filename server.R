@@ -26,7 +26,7 @@ server <- function(input, output) {
         scmap_map <- readRDS(input$to_project$datapath)
         
         scmap_ref <- readRDS(values$reference_file)
-        scmap_ref <- getFeatures(scmap_ref, n_features = as.numeric(input$n_features))
+        scmap_ref <- getFeatures(scmap_ref)
         
         # main scmap function
         scmap_map <- projectData(
@@ -113,7 +113,7 @@ server <- function(input, output) {
         switch(input$data_type,
                "own" = list(
                    box(width = 12,
-                       HTML("<p class='lead'>Select an <b>.rds</b> file containing data in <a href = 'http://bioconductor.org/packages/scater'>scater</a> format (<a href='https://scrnaseq-public-datasets.s3.amazonaws.com/scater-objects/muraro.rds'>example</a>)</p>"),
+                       HTML("<p class='lead'>Select an <b>.rds</b> file containing data in <a href = 'http://bioconductor.org/packages/scater' target='_blank'>scater</a> format (<a href='https://scrnaseq-public-datasets.s3.amazonaws.com/scater-objects/muraro.rds'>example</a>)</p>"),
                         fileInput('reference', NULL, accept=c('.rds')),
                        solidHeader = TRUE,
                        status = "primary"
@@ -125,7 +125,7 @@ server <- function(input, output) {
                              For more details of the Reference please visit
                              our <a href='https://hemberg-lab.github.io/scRNA.seq.datasets/'>collection of scRNA-seq datasets</a>.</p>"),
                        solidHeader = TRUE,
-                       status = "primary"
+                       status = "warning"
                    )
                )
         )
@@ -657,25 +657,17 @@ your <b>Projection</b> dataset.</p>
         })
     })
     
-    output$ref_features <- renderPlotly({
+    output$ref_features <- renderPlot({
         withProgress(message = 'Making plot', {
             incProgress()
-            if (input$data_type == "existing") {
-                scmap_ref <- readRDS(values$reference_file)
-            } else {
-                validate(need(
-                    values$reference_file,
-                    "\nPlease upload your Reference dataset first!"
-                ))
-                scmap_ref <- readRDS(values$reference_file)
-            }
-            scmap:::plotFeatures(scmap_ref, n_features = as.numeric(input$n_features))
+            scmap_ref <- readRDS(values$reference_file)
+            scmap:::plotFeatures(scmap_ref)
         })
     })
     
     output$download_mapping <- downloadHandler(
       filename = function() {
-        paste('scmap_mapping.csv', sep='')
+        paste('scmap_projection.csv', sep='')
       },
       content = function(con) {
         write.csv(values$mapping, con, quote = FALSE, row.names = FALSE)
