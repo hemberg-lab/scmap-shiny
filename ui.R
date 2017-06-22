@@ -98,8 +98,8 @@ dashboardPage(
                                         c("Upload your own dataset" = "own",
                                           "Use existing Reference" = "existing"),
                                         selected = "own"),
-                            solidHeader = TRUE,
-                            status = "primary"
+                            solidHeader = TRUE
+                            # status = "primary"
                         ),
                         uiOutput("datasets"),
                         solidHeader = TRUE,
@@ -110,18 +110,18 @@ dashboardPage(
                         box(width = 12,
                             HTML("<p class='lead'>Select an <b>.rds</b> file containing data in <a href = 'http://bioconductor.org/packages/scater' target='_blank'>scater</a> format (<a href='https://scrnaseq-public-datasets.s3.amazonaws.com/scater-objects/segerstolpe.rds'>example</a>)</p>"),
                             fileInput('to_project', NULL, accept=c('.rds')),
-                            solidHeader = TRUE,
-                            status = "primary"
+                            solidHeader = TRUE
+                            # status = "primary"
                         ),
                         conditionalPanel("input.data_type == 'existing'",
                         box(width = 12,
-                            HTML("<p class='lead'>Which organism is your data from?</p>"),
+                            HTML("<p class='lead'>What organism is your data from?</p>"),
                             radioButtons("organism", NULL,
                                          c("Human" = "human",
                                            "Mouse" = "mouse"),
                                          selected = "human"),
-                            solidHeader = TRUE,
-                            status = "primary"
+                            solidHeader = TRUE
+                            # status = "primary"
                         )
                         ),
                         solidHeader = TRUE,
@@ -137,15 +137,23 @@ dashboardPage(
                             HTML("<p class = 'lead'><b>scmap</b> selects 500 most informative features (genes/transcripts) by
                                  fitting a linear model to the <em>log(expression)</em> 
                                  vs <em>log(dropout)</em> distribution of features.
-                                 The most informative genes are shown in red on the plot below. Conceptually,
-                                 these genes have a higher dropout rate for a given mean expression.</p>"),
+                                 The most informative features are shown in red on the plot below. Conceptually,
+                                 these genes have a higher dropout rate for a given mean expression. More information about
+                                 the selected features is provided in the table below the plot. <em>scmap scores</em> are
+                                 defined as the residuals of the linear model.</p>"),
                             solidHeader = TRUE,
-                            status = "primary"
+                            status = "success"
                             ),
                         box(width = 12,
                             plotOutput("ref_features"),
                             solidHeader = TRUE
                             # status = "primary"
+                            ),
+                        box(width = 12,
+                            title = "Selected Features",
+                            dataTableOutput('mytable'),
+                            solidHeader = TRUE,
+                            status = "primary"
                             )
                         )
                     ),

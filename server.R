@@ -115,8 +115,8 @@ server <- function(input, output) {
                    box(width = 12,
                        HTML("<p class='lead'>Select an <b>.rds</b> file containing data in <a href = 'http://bioconductor.org/packages/scater' target='_blank'>scater</a> format (<a href='https://scrnaseq-public-datasets.s3.amazonaws.com/scater-objects/muraro.rds'>example</a>)</p>"),
                         fileInput('reference', NULL, accept=c('.rds')),
-                       solidHeader = TRUE,
-                       status = "primary"
+                       solidHeader = TRUE
+                       # status = "primary"
                    )
                ),
                "existing" = list(
@@ -124,8 +124,8 @@ server <- function(input, output) {
                        HTML("<p class='lead text-warning'>Your data will be projected to all datasets in our Reference.
                              For more details of the Reference please visit
                              our <a href='https://hemberg-lab.github.io/scRNA.seq.datasets/'>collection of scRNA-seq datasets</a>.</p>"),
-                       solidHeader = TRUE,
-                       status = "warning"
+                       solidHeader = TRUE
+                       # status = "warning"
                    )
                )
         )
@@ -143,7 +143,7 @@ server <- function(input, output) {
                        conditionalPanel("output.projection_dataset",
                        fluidRow(
                            box(width = 6,
-                               title = "Sankey diagram",
+                               title = "Projection Results",
                                HTML("<br>"),
                                uiOutput('mapping_uns'),
                                uiOutput('mapping_sank'),
@@ -635,6 +635,10 @@ your <b>Projection</b> dataset.</p>
         })
     })
     
+    output$mytable = renderDataTable({
+        values$feature_table
+    })
+    
     output$reference_dataset <- reactive({
         !is.null(input$reference$datapath)
     })
@@ -661,7 +665,15 @@ your <b>Projection</b> dataset.</p>
         withProgress(message = 'Making plot', {
             incProgress()
             scmap_ref <- readRDS(values$reference_file)
-            scmap:::plotFeatures(scmap_ref)
+            scmap_ref <- getFeatures(scmap_ref, suppress_plot = FALSE)
+            f_data <- fData(scmap_ref)
+            f_data <- f_data[, colnames(f_data) %in% c("feature_symbol", "scmap_features", "scmap_scores")]
+            f_data <- f_data[f_data$scmap_features,]
+            f_data <- f_data[order(f_data$scmap_scores, decreasing = TRUE), ]
+            rownames(f_data) <- NULL
+            f_data <- f_data[,c(1,3)]
+            colnames(f_data) <- c("Feature Name", "scmap score")
+            values$feature_table <- f_data
         })
     })
     
