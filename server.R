@@ -25,7 +25,7 @@ server <- function(input, output) {
     get_sankey <- function() {
         scmap_map <- readRDS(input$to_project$datapath)
         
-        scmap_ref <- readRDS(values$reference_file)
+        scmap_ref <- readRDS(input$reference$datapath)
         scmap_ref <- getFeatures(scmap_ref)
         
         # main scmap function
@@ -113,7 +113,7 @@ server <- function(input, output) {
         switch(input$data_type,
                "own" = list(
                    box(width = 12,
-                       HTML("<p class='lead'>Select an <b>.rds</b> file containing data in <a href = 'http://bioconductor.org/packages/scater' target='_blank'>scater</a> format (<a href='https://scrnaseq-public-datasets.s3.amazonaws.com/scater-objects/muraro.rds'>example</a>)</p>"),
+                       HTML("<p class='lead'>Select an <b>.rds</b> file containing data in <a href = 'http://bioconductor.org/packages/scater' target='_blank'>scater</a> format (<a href='https://scrnaseq-public-datasets.s3.amazonaws.com/scater-objects/muraro.rds'>example-muraro</a> - a human pancreatic <a href = 'https://hemberg-lab.github.io/scRNA.seq.datasets/human/pancreas/' target='_blank'>dataset</a> with 2126 cells)</p>"),
                         fileInput('reference', NULL, accept=c('.rds')),
                        solidHeader = TRUE
                        # status = "primary"
@@ -123,7 +123,7 @@ server <- function(input, output) {
                    box(width = 12,
                        HTML("<p class='lead text-warning'>Your data will be projected to all datasets in our Reference.
                              For more details of the Reference please visit
-                             our <a href='https://hemberg-lab.github.io/scRNA.seq.datasets/'>collection of scRNA-seq datasets</a>.</p>"),
+                             our <a href='https://hemberg-lab.github.io/scRNA.seq.datasets/' target='_blank'>collection of scRNA-seq datasets</a>.</p>"),
                        solidHeader = TRUE
                        # status = "warning"
                    )
@@ -140,7 +140,6 @@ server <- function(input, output) {
         switch(input$data_type,
                "own" = list(
                    conditionalPanel("output.reference_dataset",
-                       conditionalPanel("output.projection_dataset",
                        fluidRow(
                            box(width = 6,
                                title = "Projection Results",
@@ -153,21 +152,6 @@ server <- function(input, output) {
                                solidHeader = TRUE,
                                status = "primary"
                            )
-                       )
-                       ),
-                       conditionalPanel("!output.projection_dataset",
-                            fluidRow(
-                                column(width = 10,
-                                       HTML("
-<br><br>
-<div class='alert alert-dismissible alert-warning'>
-<p class = 'lead'>Looks like you forgot to upload a dataset that you want to 
-project to the Reference. Please go back to the <em>Datasets</em> tab and upload 
-your <b>Projection</b> dataset.</p>
-</div>"),
-                                       offset = 1
-                                       )
-                                )
                        )
                    ),
                    conditionalPanel("!output.reference_dataset",
@@ -186,7 +170,6 @@ your dataset.</p>
                    )
                ),
                "existing" = list(
-                   conditionalPanel("output.projection_dataset",
                    conditionalPanel("input.organism == 'human'",
                    fluidRow(
                        box(width = 12,
@@ -383,7 +366,7 @@ your dataset.</p>
                    ),
                    fluidRow(
                        box(width = 12,
-                           title = "Mouse Retina",
+                           title = "Mouse Embryo Stem Cells",
                            HTML("
                                 <p>More information about the datasets is available <a href='https://hemberg-lab.github.io/scRNA.seq.datasets/mouse/esc/' target='_blank'>here</a>.</p>"),
                            solidHeader = TRUE,
@@ -464,21 +447,6 @@ your dataset.</p>
                            status = "primary"
                        )
                    )
-                   )
-                   ),
-                   conditionalPanel("!output.projection_dataset",
-                                    fluidRow(
-                                        column(width = 10,
-                                            HTML("
-<br><br>
-<div class='alert alert-dismissible alert-warning'>
-<p class = 'lead'>Looks like you forgot to upload a dataset that you want to 
-project to the Reference. Please go back to the <em>Datasets</em> tab and upload 
-your <b>Projection</b> dataset.</p>
-</div>"),
-                                            offset = 1
-                                        )
-                                    )
                    )
                )
           )
@@ -611,7 +579,6 @@ your <b>Projection</b> dataset.</p>
     })
     
     observe({
-        values$reference_file <- input$reference$datapath
         # download buttons
         lapply(refs, function(i) {
             output[[i]] <- downloadHandler(
@@ -655,16 +622,11 @@ your <b>Projection</b> dataset.</p>
     )
     
     output$sankey <- renderGvis({
-        withProgress(message = 'Making plot', {
-            incProgress()
             get_sankey()
-        })
     })
     
     output$ref_features <- renderPlot({
-        withProgress(message = 'Making plot', {
-            incProgress()
-            scmap_ref <- readRDS(values$reference_file)
+            scmap_ref <- readRDS(input$reference$datapath)
             scmap_ref <- getFeatures(scmap_ref, suppress_plot = FALSE)
             f_data <- fData(scmap_ref)
             f_data <- f_data[, colnames(f_data) %in% c("feature_symbol", "scmap_features", "scmap_scores")]
@@ -674,7 +636,6 @@ your <b>Projection</b> dataset.</p>
             f_data <- f_data[,c(1,3)]
             colnames(f_data) <- c("Feature Name", "scmap score")
             values$feature_table <- f_data
-        })
     })
     
     output$download_mapping <- downloadHandler(
