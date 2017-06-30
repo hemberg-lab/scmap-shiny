@@ -155,7 +155,7 @@ dashboardPage(
                              ),
                              box(width = 12,
                                  title = "Selected Features",
-                                 dataTableOutput('mytable'),
+                                 DT::dataTableOutput('mytable'),
                                  solidHeader = TRUE,
                                  status = "primary"
                              )
