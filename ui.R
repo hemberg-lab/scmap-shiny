@@ -120,7 +120,7 @@ dashboardPage(
                                  <a href = 'http://bioconductor.org/packages/scater' target='_blank'>scater</a> 
                                  format</p><p>(<a href='https://scrnaseq-public-datasets.s3.amazonaws.com/scater-objects/segerstolpe.rds'>example-segerstolpe</a> 
                                  - a human pancreatic <a href = 'https://hemberg-lab.github.io/scRNA.seq.datasets/human/pancreas/' target='_blank'>dataset</a> 
-                                 with 3514 cells)<br></p>"),
+                                 with 3514 cells)</p><br>"),
                             fileInput('to_project', NULL, accept=c('.rds')),
                             solidHeader = TRUE
                         ),
