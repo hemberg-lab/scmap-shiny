@@ -10,14 +10,14 @@ dashboardPage(
             conditionalPanel("!(output.reference_file & output.reference_data & output.reference_feature_symbol & output.pdata_cell_types & output.projection_file & output.projection_data & output.projection_feature_symbol)",
                  sidebarMenu(
                      menuItem("About", tabName = "about", icon = icon("bank")),
-                     menuItem("Datasets", tabName = "refs", icon = icon("cloud-upload"))
+                     menuItem("Datasets", tabName = "datasets", icon = icon("cloud-upload"))
                  )
             ),
             conditionalPanel("output.reference_file & output.reference_data & output.reference_feature_symbol & output.pdata_cell_types & output.projection_file & output.projection_data & output.projection_feature_symbol",
                   sidebarMenu(
                       menuItem("About", tabName = "about", icon = icon("bank")),
-                      menuItem("Datasets", tabName = "refs", icon = icon("cloud-upload")),
-                      menuItem("Features", tabName = "ref_overview", icon = icon("gears")),
+                      menuItem("Datasets", tabName = "datasets", icon = icon("cloud-upload")),
+                      menuItem("Features", tabName = "features", icon = icon("gears")),
                       menuItem("Results", tabName = "results", icon = icon("area-chart"))
                   )
             )
@@ -26,13 +26,13 @@ dashboardPage(
              conditionalPanel("!(output.projection_file & output.projection_data & output.projection_feature_symbol)",
                   sidebarMenu(
                       menuItem("About", tabName = "about", icon = icon("bank")),
-                      menuItem("Datasets", tabName = "refs", icon = icon("cloud-upload"))
+                      menuItem("Datasets", tabName = "datasets", icon = icon("cloud-upload"))
                   )
              ),
              conditionalPanel("output.projection_file & output.projection_data & output.projection_feature_symbol",
                   sidebarMenu(
                       menuItem("About", tabName = "about", icon = icon("bank")),
-                      menuItem("Datasets", tabName = "refs", icon = icon("cloud-upload")),
+                      menuItem("Datasets", tabName = "datasets", icon = icon("cloud-upload")),
                       menuItem("Results", tabName = "results", icon = icon("area-chart"))
                   )
              )
@@ -94,7 +94,7 @@ dashboardPage(
                         )
                    )
             ),
-            tabItem(tabName = "refs",
+            tabItem(tabName = "datasets",
                 fluidRow(
                     box(width = 6,
                         title = "Reference",
@@ -159,7 +159,7 @@ dashboardPage(
                     )
                 )
             ),
-            tabItem(tabName = "ref_overview",
+            tabItem(tabName = "features",
                 fluidRow(
                     box(width = 12,
                         title = "Feature Selection",
@@ -187,7 +187,7 @@ dashboardPage(
                          ),
                          box(width = 12,
                              title = "Selected Features",
-                             DT::dataTableOutput('mytable'),
+                             DT::dataTableOutput('feature_table'),
                              solidHeader = TRUE,
                              status = "success"
                          )

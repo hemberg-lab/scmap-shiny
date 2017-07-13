@@ -66,6 +66,47 @@ server <- function(input, output) {
             res_siml <- res_siml[ , d$Reference, drop = FALSE]
             values$all_results_similarities <- res_siml
             
+            # calculate consensus projection
+            logicals <- lapply(as.list(as.data.frame(t(res_siml))), function(x){
+                !is.na(x) & x > 0.7
+            })
+            
+            consensus_labs1 <- mapply(function(x, y) {
+                    tmp <- as.character(x)[y]
+                    names(tmp) <- names(x)[y]
+                    return(tmp)
+                },
+                as.list(as.data.frame(t(res_assign))),
+                logicals
+            )
+            
+            consensus_labs2 <- lapply(consensus_labs1, function(x) {
+                    if (length(unique(x)) == 1) {
+                        return(x[1])
+                    } else {
+                        return("unassigned")
+                    }
+                }
+            )
+            
+            tmp <- as.data.frame(unlist(consensus_labs2))
+            colnames(tmp) <- "scmap_consensus_cell_types"
+            values$consensus_results <- tmp
+            
+            # visualise consensus results in a data table
+            scmap_labs <- unlist(consensus_labs2)
+            assign_rate <- 
+                length(scmap_labs[scmap_labs != "unassigned"])/length(scmap_labs) * 100
+            covered_cell_types <- as.data.frame(table(scmap_labs))
+            covered_cell_types <- 
+                covered_cell_types[order(covered_cell_types[,2], decreasing = TRUE), ]
+            covered_cell_types <- covered_cell_types[covered_cell_types[,1] != "unassigned", ]
+            covered_cell_types[,2] <- round(covered_cell_types[,2]/length(scmap_labs) * 100, 1)
+            rownames(covered_cell_types) <- NULL
+            colnames(covered_cell_types) <- NULL
+            d1 <- NULL
+            values$consensus_data_table <- as.data.frame(rbind(d1, c("Consensus", assign_rate, htmlTable(covered_cell_types))))
+            print(values$consensus_data_table)
             return(d)
         })
     }
@@ -184,18 +225,49 @@ server <- function(input, output) {
     })
     
     output$results <- renderUI({
-        fluidRow(
-            box(width = 12,
-                title = "Results",
-                DT::dataTableOutput('results_table'),
-                downloadButton("all_results_assignments", 'Download All Assignments'),
-                downloadButton("all_results_similarities", 'Download All Similarities'),
-                solidHeader = TRUE,
-                status = "success"
-            )
+        switch(input$data_type,
+               "own" = list(
+                        box(width = 12,
+                            title = "Results",
+                            DT::dataTableOutput('results_table'),
+                            downloadButton("all_results_assignments", 'Download All Assignments'),
+                            downloadButton("all_results_similarities", 'Download All Similarities'),
+                            solidHeader = TRUE,
+                            status = "success"
+                        )
+               ),
+               "existing" = list(
+                   fluidRow(
+                       box(width = 12,
+                           title = "Individual Results",
+                           DT::dataTableOutput('results_table'),
+                           downloadButton("all_results_assignments", 'Download All Assignments'),
+                           downloadButton("all_results_similarities", 'Download All Similarities'),
+                           solidHeader = TRUE,
+                           status = "success"
+                       ),
+                       box(width = 12,
+                           title = "Consensus Results",
+                           DT::dataTableOutput('consensus_results_table'),
+                           solidHeader = TRUE,
+                           status = "success"
+                       )
+                   )
+               )
         )
     })
 
+    output$consensus_results_table <- DT::renderDataTable({
+        DT::datatable(values$consensus_data_table, escape = FALSE, rownames = FALSE,
+                      class = 'cell-border stripe',
+                      options = list(
+                          dom = 'Bfrtip', 
+                          buttons = c('copy', 'excel', 'pdf', 'print', 'colvis'),
+                          columnDefs = list(list(className = 'dt-center', targets = c(0:2)))
+                      ),
+                      extensions = 'Buttons')
+    })
+    
     output$results_table <- DT::renderDataTable({
         if (input$data_type == "existing") {
             values$refs <- list.files(paste0("www/refs/", input$organism), pattern = ".txt")
@@ -213,7 +285,7 @@ server <- function(input, output) {
                       extensions = 'Buttons')
     })
 
-    output$mytable <- DT::renderDataTable({
+    output$feature_table <- DT::renderDataTable({
         DT::datatable(values$feature_table, escape = FALSE, rownames = FALSE,
                       class = 'cell-border stripe',
                       options = list(
