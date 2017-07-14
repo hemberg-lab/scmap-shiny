@@ -67,46 +67,69 @@ server <- function(input, output) {
             values$all_results_similarities <- res_siml
             
             # calculate consensus projection
-            logicals <- lapply(as.list(as.data.frame(t(res_siml))), function(x){
-                !is.na(x) & x > 0.7
-            })
-            
-            consensus_labs1 <- mapply(function(x, y) {
-                    tmp <- as.character(x)[y]
-                    names(tmp) <- names(x)[y]
-                    return(tmp)
-                },
-                as.list(as.data.frame(t(res_assign))),
-                logicals
-            )
-            
-            consensus_labs2 <- lapply(consensus_labs1, function(x) {
-                    if (length(unique(x)) == 1) {
-                        return(x[1])
+            if (nrow(res_assign) > 0) {
+                logicals <- lapply(as.list(as.data.frame(t(res_siml))), function(x){
+                    # !is.na(x) & x > 0.7
+                    tmp <- which.max(x)
+                    if (length(tmp) != 0) {
+                        if (x[tmp] >= 0.7) {
+                            return(tmp)
+                        } else {
+                            return(NA)
+                        }
                     } else {
-                        return("unassigned")
+                        return(NA)
                     }
-                }
-            )
-            
-            tmp <- as.data.frame(unlist(consensus_labs2))
-            colnames(tmp) <- "scmap_consensus_cell_types"
-            values$consensus_results <- tmp
-            
-            # visualise consensus results in a data table
-            scmap_labs <- unlist(consensus_labs2)
-            assign_rate <- 
-                length(scmap_labs[scmap_labs != "unassigned"])/length(scmap_labs) * 100
-            covered_cell_types <- as.data.frame(table(scmap_labs))
-            covered_cell_types <- 
-                covered_cell_types[order(covered_cell_types[,2], decreasing = TRUE), ]
-            covered_cell_types <- covered_cell_types[covered_cell_types[,1] != "unassigned", ]
-            covered_cell_types[,2] <- round(covered_cell_types[,2]/length(scmap_labs) * 100, 1)
-            rownames(covered_cell_types) <- NULL
-            colnames(covered_cell_types) <- NULL
-            d1 <- NULL
-            values$consensus_data_table <- as.data.frame(rbind(d1, c("Consensus", assign_rate, htmlTable(covered_cell_types))))
-            print(values$consensus_data_table)
+                })
+                
+                consensus_labs1 <- mapply(function(x, y) {
+                        if (!is.na(y)) {
+                            tmp <- as.character(x)[y]
+                            names(tmp) <- names(x)[y]
+                            return(tmp)
+                        } else {
+                            return(NA)
+                        }
+                    },
+                    as.list(as.data.frame(t(res_assign))),
+                    logicals
+                )
+                
+                # consensus_labs2 <- lapply(consensus_labs1, function(x) {
+                #         if (length(unique(x)) == 1) {
+                #             return(x[1])
+                #         } else {
+                #             return("unassigned")
+                #         }
+                #     }
+                # )
+                consensus_labs1 <- unlist(consensus_labs1)
+                consensus_labs1[is.na(consensus_labs1)] <- "unassigned"
+                tmp <- as.data.frame(unlist(consensus_labs1))
+                colnames(tmp) <- "scmap_consensus_cell_types"
+                values$consensus_results <- tmp
+                
+                # visualise consensus results in a data table
+                scmap_labs <- unlist(consensus_labs1)
+                assign_rate <- 
+                    length(scmap_labs[scmap_labs != "unassigned"])/length(scmap_labs) * 100
+                assign_rate <- round(as.numeric(assign_rate), 1)
+                covered_cell_types <- as.data.frame(table(scmap_labs))
+                covered_cell_types <- 
+                    covered_cell_types[order(covered_cell_types[,2], decreasing = TRUE), ]
+                covered_cell_types <- covered_cell_types[covered_cell_types[,1] != "unassigned", ]
+                covered_cell_types[,2] <- round(covered_cell_types[,2]/length(scmap_labs) * 100, 1)
+                rownames(covered_cell_types) <- NULL
+                colnames(covered_cell_types) <- NULL
+                
+                tmp <- NULL
+                tmp <- rbind(tmp, c("Consensus", assign_rate, htmlTable(covered_cell_types)))
+                colnames(tmp) <- c("Reference", "% of assigned cells", "% of cells per Reference Cell Type")
+                values$consensus_data_table <- as.data.frame(tmp)
+            } else {
+                tmp <- NULL
+                values$consensus_data_table <- as.data.frame(rbind(tmp, c("Consensus", 0, "There are less than ten features in common between the Reference and Projection datasets. Most probably they come from different organisms!")))
+            }
             return(d)
         })
     }
@@ -249,6 +272,7 @@ server <- function(input, output) {
                        box(width = 12,
                            title = "Consensus Results",
                            DT::dataTableOutput('consensus_results_table'),
+                           downloadButton("consensus_results_assignments", 'Download Consensus Assignments'),
                            solidHeader = TRUE,
                            status = "success"
                        )
@@ -362,6 +386,15 @@ server <- function(input, output) {
         },
         content = function(con) {
             write.csv(values$all_results_similarities, con, quote = FALSE)
+        }
+    )
+    
+    output$consensus_results_assignments <- downloadHandler(
+        filename = function() {
+            paste('scmap_results_consensus.csv', sep='')
+        },
+        content = function(con) {
+            write.csv(values$consensus_results, con, quote = FALSE)
         }
     )
     
