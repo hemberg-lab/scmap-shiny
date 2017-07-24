@@ -52,35 +52,30 @@ dashboardPage(
             tabItem(tabName = "about",
                     fluidRow(
                         box(width = 12,
-                            title = "About",
-                            HTML("<p>Single-cell RNA-seq (scRNA-seq) is 
+                            # title = "About",
+                            HTML("<p align = 'center'><img src='scmap.png' width='200'></p>
+                                 <p>Single-cell RNA-seq (scRNA-seq) is 
                                  widely used to investigate the composition of complex 
                                  tissues. However, it is often challenging to directly 
                                  compare the cells identified in two different experiments. 
                                  <b>scmap</b> allows you to project cells from an scRNA-seq 
                                  experiment (the <em>Projection</em>) on to the cell-types 
-                                 identified in a different experiment (the <em>Reference</em>).</p>"),
-                            solidHeader = TRUE,
-                            status = "primary"
-                        ),
-                        box(width = 12,
-                            title = "Links",
-                            HTML("<p>A copy of the <b>scmap</b> 
+                                 identified in a different experiment (the <em>Reference</em>).</p>
+                                <p><b>scmap</b> 
                                  manuscript is available on 
                                  <a href = 'https://doi.org/10.1101/150292' target='_blank'>bioRxiv</a>.
-                                 <br>An R package containing <b>scmap</b> source code 
+                                 <br><b>scmap</b> source code 
                                  is available on 
                                  <a href = 'https://github.com/hemberg-lab/scmap' target='_blank'>GitHub</a>.
+                                 <br><b>scmap</b> R package is also available on 
+                                 <a href = 'http://bioconductor.org/packages/scmap' target='_blank'>Bioconductor</a>.
                                  <br>More information about the existing Reference 
-                                 can be found 
-                                 <a href = 'https://hemberg-lab.github.io/scRNA.seq.datasets/' target='_blank'>here</a>.
+                                 can be found on our
+                                 <a href = 'https://hemberg-lab.github.io/scRNA.seq.datasets/' target='_blank'>dataset website</a>.
                                  <br>Please send your feedback/comments/suggestions to 
-                                 <a href='mailto:vladimir.yu.kiselev@gmail.com' target='_blank'>Vladimir Kiselev</a>.</p>"),
-                            solidHeader = TRUE,
-                            status = "primary"
+                                 <a href='mailto:vladimir.yu.kiselev@gmail.com' target='_blank'>Vladimir Kiselev</a>.</p>")
                         ),
                         box(width = 12,
-                            title = "Notes",
                             HTML("<p><b>scmap</b> is based on 
                                  <a href = 'https://doi.org/10.1093/bioinformatics/btw777' target='_blank'>scater</a>
                                  format. Please make yourself familiar with it 
@@ -89,7 +84,6 @@ dashboardPage(
                                  slots of both the Reference and Projection dataset must have the 
                                  <b><em>feature_symbol</em></b> column which contains 
                                  Feature (gene/transcript) names from the same organism.</font></p>"),
-                            solidHeader = TRUE,
                             status = "warning"
                         )
                    )
