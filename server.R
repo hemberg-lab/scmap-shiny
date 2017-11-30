@@ -297,15 +297,15 @@ server <- function(input, output) {
         values$scmap_features <- rowData(scmap_ref)$scmap_features
         values$scmap_scores <- rowData(scmap_ref)$scmap_scores
         
-        f_data <- as.data.frame(rowData(scmap_ref))
-        f_data <- f_data[, colnames(f_data) %in% c("feature_symbol", "scmap_features", "scmap_scores")]
-        f_data <- f_data[f_data$scmap_features,]
-        f_data <- f_data[order(f_data$scmap_scores, decreasing = TRUE), ]
-        f_data$scmap_scores <- round(f_data$scmap_scores, 1)
-        rownames(f_data) <- NULL
-        f_data <- f_data[,c(1,3)]
-        colnames(f_data) <- c("Feature Name", "scmap score")
-        values$feature_table <- f_data
+        row_data <- as.data.frame(rowData(scmap_ref))
+        row_data <- row_data[, colnames(row_data) %in% c("feature_symbol", "scmap_features", "scmap_scores")]
+        row_data <- row_data[row_data$scmap_features,]
+        row_data <- row_data[order(row_data$scmap_scores, decreasing = TRUE), ]
+        row_data$scmap_scores <- round(row_data$scmap_scores, 1)
+        rownames(row_data) <- NULL
+        row_data <- row_data[,c(1,3)]
+        colnames(row_data) <- c("Feature Name", "scmap score")
+        values$feature_table <- row_data
     })
     
     output$all_results_assignments <- downloadHandler(
