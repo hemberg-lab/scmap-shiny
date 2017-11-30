@@ -13,13 +13,20 @@ dashboardPage(
                      menuItem("Datasets", tabName = "datasets", icon = icon("cloud-upload"))
                  )
             ),
-            conditionalPanel("output.reference_file & output.reference_data & output.reference_feature_symbol & output.pdata_cell_types & output.projection_file & output.projection_data & output.projection_feature_symbol",
+            conditionalPanel("output.reference_file & output.reference_data & output.reference_feature_symbol & output.pdata_cell_types & output.projection_file & output.projection_data & output.projection_feature_symbol & !output.features",
                   sidebarMenu(
                       menuItem("About", tabName = "about", icon = icon("bank")),
                       menuItem("Datasets", tabName = "datasets", icon = icon("cloud-upload")),
-                      menuItem("Features", tabName = "features", icon = icon("gears")),
-                      menuItem("Results", tabName = "results", icon = icon("area-chart"))
+                      menuItem("Features", tabName = "features", icon = icon("gears"))
                   )
+            ),
+            conditionalPanel("output.reference_file & output.reference_data & output.reference_feature_symbol & output.pdata_cell_types & output.projection_file & output.projection_data & output.projection_feature_symbol & output.features",
+                 sidebarMenu(
+                     menuItem("About", tabName = "about", icon = icon("bank")),
+                     menuItem("Datasets", tabName = "datasets", icon = icon("cloud-upload")),
+                     menuItem("Features", tabName = "features", icon = icon("gears")),
+                     menuItem("Results", tabName = "results", icon = icon("area-chart"))
+                 )
             )
         ),
         conditionalPanel("input.data_type == 'existing'",
@@ -52,18 +59,6 @@ dashboardPage(
             tabItem(tabName = "about",
                     fluidRow(
                         box(width = 12,
-                            title = "SingleCellExperiment class",
-                            HTML("<p class = 'lead'>Please note that due to 
-                                 introduction of <a href = 'https://bioconductor.org/packages/devel/bioc/html/SingleCellExperiment.html' target='_blank'><em>SingleCellExperiment</em></a>
-                                 class the old <b>scater</b> objects 
-                                 (<em>SCESet</em> class) will only be accepted until
-                                 October 31, 2017. After that the old <em>SCESet</em> 
-                                 class will be deprecated in <b>scmap</b> and only objects of 
-                                 <em>SingleCellExperiment</em> will be accepted.</p>"),
-                            status = "warning",
-                            solidHeader = TRUE
-                            ),
-                        box(width = 12,
                             # title = "About",
                             HTML("<p align = 'center'><img src='scmap.png' width='200'></p>
                                  <p>Single-cell RNA-seq (scRNA-seq) is 
@@ -89,10 +84,10 @@ dashboardPage(
                         ),
                         box(width = 12,
                             HTML("<p><b>scmap</b> is based on 
-                                 <a href = 'https://doi.org/10.1093/bioinformatics/btw777' target='_blank'>scater</a>
+                                 <a href = 'http://bioconductor.org/packages/SingleCellExperiment/' target='_blank'>SingleCellExperiment</a>
                                  format. Please make yourself familiar with it 
                                  before running <b>scmap</b>.</p>
-                                 <p><b><em>featureData</em></b> 
+                                 <p><b><em>rowData</em></b> 
                                  slots of both the Reference and Projection dataset must have the 
                                  <b><em>feature_symbol</em></b> column which contains 
                                  Feature (gene/transcript) names from the same organism.</font></p>"),
@@ -123,7 +118,7 @@ dashboardPage(
                         box(width = 12,
                             HTML("<p class='lead'>Select an <b>.rds</b> file 
                                  containing data in 
-                                 <a href = 'http://bioconductor.org/packages/scater' target='_blank'>scater</a> 
+                                 <a href = 'http://bioconductor.org/packages/SingleCellExperiment/' target='_blank'>SingleCellExperiment</a> 
                                  format</p><p>(<a href='https://scrnaseq-public-datasets.s3.amazonaws.com/scater-objects/segerstolpe.rds'>example-segerstolpe</a> 
                                  - a human pancreatic <a href = 'https://hemberg-lab.github.io/scRNA.seq.datasets/human/pancreas/' target='_blank'>dataset</a> 
                                  with 3514 cells)</p><br>"),
@@ -144,7 +139,7 @@ dashboardPage(
                              box(width = 12,
                                  HTML("
                                  <div class='alert alert-danger'>
-                                 <p class = 'lead'>Your data is not in <b>scater</b> format!
+                                 <p class = 'lead'>Your data is not in <b>SingleCellExperiment</b> format!
                                  Please upload a data in the correct format.</p>
                                  </div>"),
                                  solidHeader = TRUE
@@ -154,7 +149,7 @@ dashboardPage(
                              box(width = 12,
                                  HTML("
                                       <div class='alert alert-danger'>
-                                      <p class = 'lead'><em>featureData</em> slot of your <b>scater</b> object does not contain a 
+                                      <p class = 'lead'><em>rowData</em> slot of your <b>SingleCellExperiment</b> object does not contain a 
                                       <em>feature_symbol</em> column. Please add it to your object and re-upload it.</p>
                                       </div>"),
                                  solidHeader = TRUE

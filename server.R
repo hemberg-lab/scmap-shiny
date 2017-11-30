@@ -25,19 +25,27 @@ server <- function(input, output) {
             index <- list()
             for (f in values$refs) {
                 name <- strsplit(f, "\\.")[[1]][1]
-                index[[name]] <- read.table(
+                tmp <- read.csv(
                     paste0(
                         "www/refs/", 
                         input$organism, "/", f
-                    ), 
-                    check.names = FALSE, 
-                    sep = "\t"
+                    )
                 )
+                rownames(tmp) <- tmp[,1]
+                tmp <- tmp[,-1]
+                index[[name]] <- tmp
             }
         } else {
             # compute the index
+            dataset <- values$reference_data()
+            if(values$features) {
+                rowData(dataset)$scmap_features <- values$scmap_features
+                rowData(dataset)$scmap_scores <- values$scmap_scores
+            } else {
+                dataset <- selectFeatures(dataset)
+            }
             index <- indexCluster(
-                selectFeatures(values$reference_data()), 
+                dataset, 
                 cluster_col = input$pdata_cell_types
             )
             index <- list(metadata(index)$scmap_cluster_index)
@@ -73,10 +81,13 @@ server <- function(input, output) {
         )
         # compute which clusters have not been covered
         clusters_all <- lapply(index, colnames)
+        if(length(clusters_covered) > 1) {
+            clusters_all <- clusters_all[names(clusters_covered)]
+        }
         clusters_notcovered <- lapply(
             seq_along(clusters_covered), 
             function(i) {
-                clusters_all_labs <- clusters_all[[names(clusters_covered)[[i]]]]
+                clusters_all_labs <- clusters_all[[i]]
                 paste(
                     clusters_all_labs[!clusters_all_labs %in% clusters_covered[[i]][,1]],
                     collapse = ", "
@@ -87,8 +98,13 @@ server <- function(input, output) {
         # convert matrixes to htmlTables
         clusters_covered <- lapply(clusters_covered, function(x) {htmlTable(x)})
         # create a table containing all results
+        if(length(clusters_covered) > 1) {
+            ref_names <- names(clusters_covered)
+        } else {
+            ref_names <- "Uploaded"
+        }
         to_show <- data.frame(
-            names(clusters_covered),
+            ref_names,
             unlist(assign_rate),
             unlist(clusters_covered),
             unlist(clusters_notcovered)
@@ -103,7 +119,7 @@ server <- function(input, output) {
         switch(input$data_type,
                "own" = list(
                    box(width = 12,
-                       HTML("<p class='lead'>Select an <b>.rds</b> file containing data in <a href = 'http://bioconductor.org/packages/scater' target='_blank'>scater</a> format</p>
+                       HTML("<p class='lead'>Select an <b>.rds</b> file containing data in <a href = 'http://bioconductor.org/packages/SingleCellExperiment' target='_blank'>SingleCellExperiment</a> format</p>
                             <p>(<a href='https://scrnaseq-public-datasets.s3.amazonaws.com/scater-objects/muraro.rds'>example-muraro</a> - a human pancreatic <a href = 'https://hemberg-lab.github.io/scRNA.seq.datasets/human/pancreas/' target='_blank'>dataset</a> with 2126 cells)</p><br>"),
                        fileInput('reference', NULL, accept=c('.rds')),
                        solidHeader = TRUE
@@ -113,7 +129,7 @@ server <- function(input, output) {
                         box(width = 12,
                             HTML("
                                  <div class='alert alert-danger'>
-                                 <p class = 'lead'>Your data is not in <b>scater</b> format!
+                                 <p class = 'lead'>Your data is not in <b>SingleCellExperiment</b> format!
                                  Please upload a data in the correct format.</p>
                                  </div>"),
                             solidHeader = TRUE
@@ -123,7 +139,7 @@ server <- function(input, output) {
                         box(width = 12,
                             HTML("
                                  <div class='alert alert-danger'>
-                                 <p class = 'lead'><em>featureData</em> slot of your <b>scater</b> object does not contain a 
+                                 <p class = 'lead'><em>rowData</em> slot of your <b>SingleCellExperiment</b> object does not contain a 
                                  <em>feature_symbol</em> column. Please add it to your object and re-upload it.</p>
                                  </div>"),
                             solidHeader = TRUE
@@ -131,7 +147,7 @@ server <- function(input, output) {
                     ),
                    conditionalPanel("output.reference_file & output.reference_data & output.reference_feature_symbol", 
                        box(width = 12,
-                           HTML("<p class='lead'>Select a column of the <em>phenoData</em> data slot, containing the cell type annotations:</p>"),
+                           HTML("<p class='lead'>Select a column of the <em>colData</em> data slot, containing the cell type annotations:</p>"),
                            selectInput('pdata_cell_types', "", values$ref_pdata_colnames()),
                            solidHeader = TRUE
                            # status = "primary"
@@ -142,7 +158,7 @@ server <- function(input, output) {
                             HTML("
                                  <div class='alert alert-danger'>
                                  <p class = 'lead'>The chosen column does not seem to contain cell types annotations.
-                                    Please select a correct column of the <em>phenoData</em> slot with the cell type annotations!</p>
+                                    Please select a correct column of the <em>colData</em> slot with the cell type annotations!</p>
                                  </div>"),
                             solidHeader = TRUE
                         )
@@ -209,7 +225,7 @@ server <- function(input, output) {
     
     output$results_table <- DT::renderDataTable({
         if (input$data_type == "existing") {
-            values$refs <- list.files(paste0("www/refs/", input$organism), pattern = ".txt")
+            values$refs <- list.files(paste0("www/refs/", input$organism), pattern = ".csv")
         } else {
             values$refs <- "own"
         }
@@ -239,6 +255,7 @@ server <- function(input, output) {
             if (!is.null(input$reference$datapath)) {
                 scmap_ref <- readRDS(input$reference$datapath)
                 if (class(scmap_ref) == "SingleCellExperiment") {
+                    values$features <- FALSE
                     return(scmap_ref)
                 } else {
                     return(NULL)
@@ -273,8 +290,14 @@ server <- function(input, output) {
     })
     
     output$ref_features <- renderPlot({
-        scmap_ref <- getFeatures(values$reference_data(), suppress_plot = FALSE)
-        f_data <- rowData(scmap_ref)
+        scmap_ref <- selectFeatures(values$reference_data(), suppress_plot = FALSE)
+        
+        # update reactive variables
+        values$features <- TRUE
+        values$scmap_features <- rowData(scmap_ref)$scmap_features
+        values$scmap_scores <- rowData(scmap_ref)$scmap_scores
+        
+        f_data <- as.data.frame(rowData(scmap_ref))
         f_data <- f_data[, colnames(f_data) %in% c("feature_symbol", "scmap_features", "scmap_scores")]
         f_data <- f_data[f_data$scmap_features,]
         f_data <- f_data[order(f_data$scmap_scores, decreasing = TRUE), ]
@@ -348,6 +371,10 @@ server <- function(input, output) {
         }
     })
     
+    output$features <- reactive({
+        return(values$features)
+    })
+    
     # make output variables visible for the client side
     outputOptions(output, "projection_file", suspendWhenHidden = FALSE)
     outputOptions(output, "reference_file", suspendWhenHidden = FALSE)
@@ -356,4 +383,5 @@ server <- function(input, output) {
     outputOptions(output, "reference_feature_symbol", suspendWhenHidden = FALSE)
     outputOptions(output, "projection_feature_symbol", suspendWhenHidden = FALSE)
     outputOptions(output, "pdata_cell_types", suspendWhenHidden = FALSE)
+    outputOptions(output, "features", suspendWhenHidden = FALSE)
 }
