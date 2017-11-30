@@ -52,6 +52,18 @@ dashboardPage(
             tabItem(tabName = "about",
                     fluidRow(
                         box(width = 12,
+                            title = "SingleCellExperiment class",
+                            HTML("<p class = 'lead'>Please note that due to 
+                                 introduction of <a href = 'https://bioconductor.org/packages/devel/bioc/html/SingleCellExperiment.html' target='_blank'><em>SingleCellExperiment</em></a>
+                                 class the old <b>scater</b> objects 
+                                 (<em>SCESet</em> class) will only be accepted until
+                                 October 31, 2017. After that the old <em>SCESet</em> 
+                                 class will be deprecated in <b>scmap</b> and only objects of 
+                                 <em>SingleCellExperiment</em> will be accepted.</p>"),
+                            status = "warning",
+                            solidHeader = TRUE
+                            ),
+                        box(width = 12,
                             # title = "About",
                             HTML("<p align = 'center'><img src='scmap.png' width='200'></p>
                                  <p>Single-cell RNA-seq (scRNA-seq) is 
