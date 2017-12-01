@@ -18,48 +18,10 @@ values <- reactiveValues()
 
 # Define server logic required to draw a histogram
 server <- function(input, output) {
-    scmap <- function() {
-        # run scmap
-        if (input$data_type == "existing") {
-            # load indexes
-            index <- list()
-            for (f in values$refs) {
-                name <- strsplit(f, "\\.")[[1]][1]
-                tmp <- read.csv(
-                    paste0(
-                        "www/refs/", 
-                        input$organism, "/", f
-                    )
-                )
-                rownames(tmp) <- tmp[,1]
-                tmp <- tmp[,-1]
-                index[[name]] <- tmp
-            }
-        } else {
-            # compute the index
-            dataset <- values$reference_data()
-            if(values$features) {
-                rowData(dataset)$scmap_features <- values$scmap_features
-                rowData(dataset)$scmap_scores <- values$scmap_scores
-            } else {
-                dataset <- selectFeatures(dataset)
-            }
-            index <- indexCluster(
-                dataset, 
-                cluster_col = input$pdata_cell_types
-            )
-            index <- list(metadata(index)$scmap_cluster_index)
-        }
-        # main scmap function
-        scmapCluster_results <- scmapCluster(
-            values$projection_data(),
-            index_list = index
-        )
-        values$all_results_similarities <- scmapCluster_results$scmap_cluster_siml
-        values$all_results_assignments <- scmapCluster_results$scmap_cluster_labs
+    scmapClusterResults2table <- function(index, labs) {
         # compute assignement rate
         assign_rate <- apply(
-            scmapCluster_results$scmap_cluster_labs, 
+            labs, 
             2, 
             function(x) {
                 round(length(x[x != "unassigned"])/length(x) * 100, 1)
@@ -67,7 +29,7 @@ server <- function(input, output) {
         )
         # compute which clusters have been covered
         clusters_covered <- apply(
-            scmapCluster_results$scmap_cluster_labs,
+            labs,
             2,
             function(x) {
                 y <- as.data.frame(table(x))
@@ -103,14 +65,78 @@ server <- function(input, output) {
         } else {
             ref_names <- "Uploaded"
         }
-        to_show <- data.frame(
+        # return all scmapCluster results to values
+        res <- data.frame(
             ref_names,
             unlist(assign_rate),
             unlist(clusters_covered),
             unlist(clusters_notcovered)
         )
-        colnames(to_show) <- c("Reference", "% of assigned cells", "% of cells per Reference Cluster", "Missed Reference Clusters")
-        return(to_show)
+        colnames(res) <- c("Reference", "% of assigned cells", 
+                           "% of cells per Reference Cluster", 
+                           "Missed Reference Clusters")
+        return(res)
+    }
+    
+    getIndex <- function() {
+        if (input$data_type == "existing") {
+            # load indexes
+            files <- list.files(paste0("www/refs/", input$organism), pattern = ".csv")
+            index <- list()
+            for (f in files) {
+                name <- strsplit(f, "\\.")[[1]][1]
+                tmp <- read.csv(
+                    paste0(
+                        "www/refs/", 
+                        input$organism, "/", f
+                    )
+                )
+                rownames(tmp) <- tmp[,1]
+                tmp <- tmp[,-1]
+                index[[name]] <- tmp
+            }
+        } else {
+            # compute the index
+            dataset <- values$reference_data()
+            if(values$features) {
+                rowData(dataset)$scmap_features <- values$scmap_features
+                rowData(dataset)$scmap_scores <- values$scmap_scores
+            } else {
+                dataset <- selectFeatures(dataset)
+            }
+            index <- indexCluster(
+                dataset, 
+                cluster_col = input$pdata_cell_types
+            )
+            index <- list(metadata(index)$scmap_cluster_index)
+        }
+        return(index)
+    }
+    
+    scmap <- function() {
+        
+        # compute index
+        index <- getIndex()
+
+        # run scmap-cluster
+        scmapCluster_results <- scmapCluster(
+            values$projection_data(),
+            index_list = index
+        )
+        
+        if(!"SingleCellExperiment" %in% is(scmapCluster_results)) {
+            # summarise results of scmap-cluster
+            values$scmap_cluster_siml <- scmapCluster_results$scmap_cluster_siml
+            values$scmap_cluster_labs <- scmapCluster_results$scmap_cluster_labs
+            values$scmap_cluster_comb <- scmapCluster_results$combined_labs
+            values$scmap_cluster_all <- 
+                scmapClusterResults2table(index, scmapCluster_results$scmap_cluster_labs)
+            values$scmap_cluster_combined <- 
+                scmapClusterResults2table(index, data.frame(scmapCluster_results$combined_labs))
+        } else {
+            values$scmap_cluster_worked <- FALSE
+        }
+        return()
     }
     
     output$datasets <- renderUI({
@@ -178,14 +204,14 @@ server <- function(input, output) {
         )
     })
     
-    output$results <- renderUI({
+    output$results_cluster <- renderUI({
         switch(input$data_type,
                "own" = list(
                         box(width = 12,
                             title = "Results",
                             DT::dataTableOutput('results_table'),
-                            downloadButton("all_results_assignments", 'Download All Assignments'),
-                            downloadButton("all_results_similarities", 'Download All Similarities'),
+                            downloadButton("scmap_cluster_labs", 'Download All Assignments'),
+                            downloadButton("scmap_cluster_siml", 'Download All Similarities'),
                             solidHeader = TRUE,
                             status = "success"
                         )
@@ -195,8 +221,8 @@ server <- function(input, output) {
                        box(width = 12,
                            title = "Individual Results",
                            DT::dataTableOutput('results_table'),
-                           downloadButton("all_results_assignments", 'Download All Assignments'),
-                           downloadButton("all_results_similarities", 'Download All Similarities'),
+                           downloadButton("scmap_cluster_labs", 'Download All Assignments'),
+                           downloadButton("scmap_cluster_siml", 'Download All Similarities'),
                            solidHeader = TRUE,
                            status = "success"
                        ),
@@ -213,7 +239,7 @@ server <- function(input, output) {
     })
 
     output$consensus_results_table <- DT::renderDataTable({
-        DT::datatable(values$consensus_data_table, escape = FALSE, rownames = FALSE,
+        DT::datatable(values$scmap_cluster_combined, escape = FALSE, rownames = FALSE,
                       class = 'cell-border stripe',
                       options = list(
                           dom = 'Bfrtip', 
@@ -224,12 +250,8 @@ server <- function(input, output) {
     })
     
     output$results_table <- DT::renderDataTable({
-        if (input$data_type == "existing") {
-            values$refs <- list.files(paste0("www/refs/", input$organism), pattern = ".csv")
-        } else {
-            values$refs <- "own"
-        }
-        DT::datatable(scmap(), escape = FALSE, rownames = FALSE,
+        scmap()
+        DT::datatable(values$scmap_cluster_all, escape = FALSE, rownames = FALSE,
                       class = 'cell-border stripe',
                       options = list(
                           dom = 'Bfrtip', 
@@ -308,21 +330,21 @@ server <- function(input, output) {
         values$feature_table <- row_data
     })
     
-    output$all_results_assignments <- downloadHandler(
+    output$scmap_cluster_labs <- downloadHandler(
         filename = function() {
             paste('scmap_results_assignments.csv', sep='')
         },
         content = function(con) {
-            write.csv(values$all_results_assignments, con, quote = FALSE)
+            write.csv(values$scmap_cluster_labs, con, quote = FALSE)
         }
     )
     
-    output$all_results_similarities <- downloadHandler(
+    output$scmap_cluster_siml <- downloadHandler(
         filename = function() {
             paste('scmap_results_similarities.csv', sep='')
         },
         content = function(con) {
-            write.csv(values$all_results_similarities, con, quote = FALSE)
+            write.csv(values$scmap_cluster_siml, con, quote = FALSE)
         }
     )
     
@@ -331,7 +353,7 @@ server <- function(input, output) {
             paste('scmap_results_consensus.csv', sep='')
         },
         content = function(con) {
-            write.csv(values$consensus_results, con, quote = FALSE)
+            write.csv(values$scmap_cluster_comb, con, quote = FALSE)
         }
     )
     
@@ -343,9 +365,11 @@ server <- function(input, output) {
         return(!is.null(input$to_project$datapath))
     })
     output$reference_data <- reactive({
+        values$scmap_cluster_worked <- TRUE
         return(!is.null(values$reference_data()))
     })
     output$projection_data <- reactive({
+        values$scmap_cluster_worked <- TRUE
         return(!is.null(values$projection_data()))
     })
     output$reference_feature_symbol <- reactive({
@@ -375,6 +399,10 @@ server <- function(input, output) {
         return(values$features)
     })
     
+    output$scmap_cluster_worked <- reactive({
+        return(values$scmap_cluster_worked)
+    })
+    
     # make output variables visible for the client side
     outputOptions(output, "projection_file", suspendWhenHidden = FALSE)
     outputOptions(output, "reference_file", suspendWhenHidden = FALSE)
@@ -384,4 +412,5 @@ server <- function(input, output) {
     outputOptions(output, "projection_feature_symbol", suspendWhenHidden = FALSE)
     outputOptions(output, "pdata_cell_types", suspendWhenHidden = FALSE)
     outputOptions(output, "features", suspendWhenHidden = FALSE)
+    outputOptions(output, "scmap_cluster_worked", suspendWhenHidden = FALSE)
 }

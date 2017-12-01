@@ -25,7 +25,7 @@ dashboardPage(
                      menuItem("About", tabName = "about", icon = icon("bank")),
                      menuItem("Datasets", tabName = "datasets", icon = icon("cloud-upload")),
                      menuItem("Features", tabName = "features", icon = icon("gears")),
-                     menuItem("Results", tabName = "results", icon = icon("area-chart"))
+                     menuItem("scmap-cluster", tabName = "results_cluster", icon = icon("area-chart"))
                  )
             )
         ),
@@ -40,7 +40,7 @@ dashboardPage(
                   sidebarMenu(
                       menuItem("About", tabName = "about", icon = icon("bank")),
                       menuItem("Datasets", tabName = "datasets", icon = icon("cloud-upload")),
-                      menuItem("Results", tabName = "results", icon = icon("area-chart"))
+                      menuItem("scmap-cluster", tabName = "results_cluster", icon = icon("area-chart"))
                   )
              )
         )
@@ -206,7 +206,7 @@ dashboardPage(
                     )
                 )
             ),
-            tabItem(tabName = "results",
+            tabItem(tabName = "results_cluster",
                 fluidRow(
                     conditionalPanel("input.data_type == 'own'",
                          box(width = 12,
@@ -237,8 +237,8 @@ dashboardPage(
                         )
                     )
                 ),
-                conditionalPanel(condition="!$('html').hasClass('shiny-busy')",
-                    uiOutput("results")
+                conditionalPanel(condition="!$('html').hasClass('shiny-busy') & output.scmap_cluster_worked",
+                    uiOutput("results_cluster")
                 ),
                 conditionalPanel(condition="$('html').hasClass('shiny-busy')",
                     fluidRow(
@@ -251,6 +251,17 @@ dashboardPage(
                                      </div>")), 
                             offset = 2)
                     )
+                ),
+                conditionalPanel("!output.scmap_cluster_worked",
+                    box(width = 12,
+                     HTML("
+                          <div class='alert alert-danger'>
+                          <p class = 'lead'>scmap-cluster did not work! Most probably
+                            Reference and Projection come from different organisms, 
+                            please check your inputs!</p>
+                          </div>"),
+                     solidHeader = TRUE
+                     )
                 )
             )
         )
