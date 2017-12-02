@@ -1,9 +1,9 @@
 FROM rocker/shiny:latest
 
-# RUN apt-get update -y --no-install-recommends \ 
-#        && apt-get -y install -f \
-#            libssl-dev \
-#            libcurl4-openssl-dev
+# install devel version openssl for some R packages
+RUN apt-get update -y --no-install-recommends && apt-get -y install -f \
+            libssl-dev \
+            libcurl4-openssl-dev
             
 # install R packages
 RUN Rscript -e "install.packages(c('shinydashboard', 'htmlTable', 'DT', 'devtools'), \
