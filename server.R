@@ -10,6 +10,7 @@ library(shiny)
 library(SingleCellExperiment)
 library(scmap)
 library(htmlTable)
+library(DT)
 
 options(shiny.maxRequestSize=200*1024^2)
 
