@@ -10,12 +10,14 @@ dashboardPage(
             conditionalPanel("!(output.reference_file & output.reference_data & output.reference_feature_symbol & output.pdata_cell_types & output.projection_file & output.projection_data & output.projection_feature_symbol)",
                  sidebarMenu(
                      menuItem("About", tabName = "about", icon = icon("bank")),
+                     menuItem("Tutorial", tabName = "tutorial", icon = icon("file-text")),
                      menuItem("Datasets", tabName = "datasets", icon = icon("cloud-upload"))
                  )
             ),
             conditionalPanel("output.reference_file & output.reference_data & output.reference_feature_symbol & output.pdata_cell_types & output.projection_file & output.projection_data & output.projection_feature_symbol & !output.features",
                   sidebarMenu(
                       menuItem("About", tabName = "about", icon = icon("bank")),
+                      menuItem("Tutorial", tabName = "tutorial", icon = icon("file-text")),
                       menuItem("Datasets", tabName = "datasets", icon = icon("cloud-upload")),
                       menuItem("Features", tabName = "features", icon = icon("gears"))
                   )
@@ -23,6 +25,7 @@ dashboardPage(
             conditionalPanel("output.reference_file & output.reference_data & output.reference_feature_symbol & output.pdata_cell_types & output.projection_file & output.projection_data & output.projection_feature_symbol & output.features",
                  sidebarMenu(
                      menuItem("About", tabName = "about", icon = icon("bank")),
+                     menuItem("Tutorial", tabName = "tutorial", icon = icon("file-text")),
                      menuItem("Datasets", tabName = "datasets", icon = icon("cloud-upload")),
                      menuItem("Features", tabName = "features", icon = icon("gears")),
                      menuItem("Results", tabName = "results", icon = icon("area-chart"))
@@ -33,12 +36,14 @@ dashboardPage(
              conditionalPanel("!(output.projection_file & output.projection_data & output.projection_feature_symbol)",
                   sidebarMenu(
                       menuItem("About", tabName = "about", icon = icon("bank")),
+                      menuItem("Tutorial", tabName = "tutorial", icon = icon("file-text")),
                       menuItem("Datasets", tabName = "datasets", icon = icon("cloud-upload"))
                   )
              ),
              conditionalPanel("output.projection_file & output.projection_data & output.projection_feature_symbol",
                   sidebarMenu(
                       menuItem("About", tabName = "about", icon = icon("bank")),
+                      menuItem("Tutorial", tabName = "tutorial", icon = icon("file-text")),
                       menuItem("Datasets", tabName = "datasets", icon = icon("cloud-upload")),
                       menuItem("Results", tabName = "results", icon = icon("area-chart"))
                   )
@@ -94,6 +99,13 @@ dashboardPage(
                             status = "warning"
                         )
                    )
+            ),
+            tabItem(tabName = "tutorial",
+                    fluidRow(
+                        box(width = 12,
+                            includeHTML("tutorial.html")
+                        )
+                    )
             ),
             tabItem(tabName = "datasets",
                 fluidRow(
