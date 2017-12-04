@@ -79,16 +79,16 @@ server <- function(input, output) {
         return(res)
     }
     
-    getIndex <- function() {
+    scmapCluster_index <- function() {
         if (input$data_type == "existing") {
             # load indexes
-            files <- list.files(paste0("www/refs/", input$organism), pattern = ".csv")
+            files <- list.files(paste0("www/scmap-cluster/", input$organism), pattern = ".csv")
             index <- list()
             for (f in files) {
                 name <- strsplit(f, "\\.")[[1]][1]
                 tmp <- read.csv(
                     paste0(
-                        "www/refs/", 
+                        "www/scmap-cluster/", 
                         input$organism, "/", f
                     )
                 )
@@ -114,29 +114,74 @@ server <- function(input, output) {
         return(index)
     }
     
+    scmapCell_index <- function() {
+        if (input$data_type == "existing") {
+            # load indexes
+            files <- list.files(paste0("www/scmap-cell/", input$organism), pattern = ".rds")
+            index <- list()
+            for (f in files) {
+                name <- strsplit(f, "\\.")[[1]][1]
+                tmp <- readRDS(
+                    paste0(
+                        "www/scmap-cell/", 
+                        input$organism, "/", f
+                    )
+                )
+                index[[name]] <- tmp
+            }
+        } else {
+            # compute the index
+            dataset <- values$reference_data()
+            if(values$features) {
+                rowData(dataset)$scmap_features <- values$scmap_features
+                rowData(dataset)$scmap_scores <- values$scmap_scores
+            } else {
+                dataset <- selectFeatures(dataset)
+            }
+            index <- indexCell(
+                dataset
+            )
+            index <- list(metadata(index)$scmap_cell_index)
+        }
+        return(index)
+    }
+    
     scmap <- function() {
         
-        # compute index
-        index <- getIndex()
-
         # run scmap-cluster
+        index_cluster <- scmapCluster_index()
         scmapCluster_results <- scmapCluster(
             values$projection_data(),
-            index_list = index
+            index_list = index_cluster
         )
         
         if(!"SingleCellExperiment" %in% is(scmapCluster_results)) {
             # summarise results of scmap-cluster
-            values$scmap_cluster_siml <- scmapCluster_results$scmap_cluster_siml
-            values$scmap_cluster_labs <- scmapCluster_results$scmap_cluster_labs
-            values$scmap_cluster_comb <- scmapCluster_results$combined_labs
+            values$scmap_cluster_res <- scmapCluster_results
             values$scmap_cluster_all <- 
-                scmapClusterResults2table(index, scmapCluster_results$scmap_cluster_labs)
+                scmapClusterResults2table(index_cluster, scmapCluster_results$scmap_cluster_labs)
             values$scmap_cluster_combined <- 
-                scmapClusterResults2table(index, data.frame(scmapCluster_results$combined_labs))
+                scmapClusterResults2table(index_cluster, data.frame(scmapCluster_results$combined_labs))
         } else {
             values$scmap_cluster_worked <- FALSE
         }
+        
+        if(input$run_scmap_cell == "Yes") {
+            # run scmap-cell
+            index_cell <- scmapCell_index()
+            scmapCell_results <- scmapCell(
+                values$projection_data(),
+                index_list = index_cell
+            )
+            if("list" %in% is(scmapCell_results)) {
+                # summarise results of scmap-cell
+                values$scmap_cell_all <- scmapCell_results
+            } else {
+                print(class(scmapCell_results))
+                values$scmap_cell_worked <- FALSE
+            }
+        }
+        
         return()
     }
     
@@ -205,35 +250,50 @@ server <- function(input, output) {
         )
     })
     
-    output$results_cluster <- renderUI({
+    output$results <- renderUI({
         switch(input$data_type,
                "own" = list(
+                   fluidRow(
                         box(width = 12,
-                            title = "Results",
+                            title = "scmap-cluster",
                             DT::dataTableOutput('results_table'),
-                            downloadButton("scmap_cluster_labs", 'Download All Assignments'),
-                            downloadButton("scmap_cluster_siml", 'Download All Similarities'),
+                            downloadButton("scmap_cluster_all", 'Download'),
                             solidHeader = TRUE,
                             status = "success"
+                        ),
+                        conditionalPanel("input.run_scmap_cell == 'Yes'", 
+                             box(width = 12,
+                                 title = "scmap-cell",
+                                 downloadButton("scmap_cell_all", 'Download'),
+                                 solidHeader = TRUE,
+                                 status = "success"
+                             )
                         )
+                   )
                ),
                "existing" = list(
                    fluidRow(
                        box(width = 12,
-                           title = "Individual Results",
+                           title = "scmap-cluster",
                            DT::dataTableOutput('results_table'),
-                           downloadButton("scmap_cluster_labs", 'Download All Assignments'),
-                           downloadButton("scmap_cluster_siml", 'Download All Similarities'),
+                           downloadButton("scmap_cluster_all", 'Download'),
                            solidHeader = TRUE,
                            status = "success"
                        ),
                        box(width = 12,
-                           title = "Consensus Results",
+                           title = "scmap-cluster (combined)",
                            DT::dataTableOutput('consensus_results_table'),
-                           downloadButton("consensus_results_assignments", 'Download Consensus Assignments'),
                            solidHeader = TRUE,
                            status = "success"
-                       )
+                       ),
+                       conditionalPanel("input.run_scmap_cell == 'Yes'", 
+                            box(width = 12,
+                                title = "scmap-cell",
+                                downloadButton("scmap_cell_all", 'Download'),
+                                solidHeader = TRUE,
+                                status = "success"
+                            )
+                        )
                    )
                )
         )
@@ -331,30 +391,21 @@ server <- function(input, output) {
         values$feature_table <- row_data
     })
     
-    output$scmap_cluster_labs <- downloadHandler(
+    output$scmap_cluster_all <- downloadHandler(
         filename = function() {
-            paste('scmap_results_assignments.csv', sep='')
+            'scmap-cluster.rds'
         },
         content = function(con) {
-            write.csv(values$scmap_cluster_labs, con, quote = FALSE)
+            saveRDS(values$scmap_cluster_res, con)
         }
     )
     
-    output$scmap_cluster_siml <- downloadHandler(
+    output$scmap_cell_all <- downloadHandler(
         filename = function() {
-            paste('scmap_results_similarities.csv', sep='')
+            'scmap-cell.rds'
         },
         content = function(con) {
-            write.csv(values$scmap_cluster_siml, con, quote = FALSE)
-        }
-    )
-    
-    output$consensus_results_assignments <- downloadHandler(
-        filename = function() {
-            paste('scmap_results_consensus.csv', sep='')
-        },
-        content = function(con) {
-            write.csv(values$scmap_cluster_comb, con, quote = FALSE)
+            saveRDS(values$scmap_cell_all, con)
         }
     )
     
@@ -367,10 +418,12 @@ server <- function(input, output) {
     })
     output$reference_data <- reactive({
         values$scmap_cluster_worked <- TRUE
+        values$scmap_cell_worked <- TRUE
         return(!is.null(values$reference_data()))
     })
     output$projection_data <- reactive({
         values$scmap_cluster_worked <- TRUE
+        values$scmap_cell_worked <- TRUE
         return(!is.null(values$projection_data()))
     })
     output$reference_feature_symbol <- reactive({
@@ -404,6 +457,10 @@ server <- function(input, output) {
         return(values$scmap_cluster_worked)
     })
     
+    output$scmap_cell_worked <- reactive({
+        return(values$scmap_cell_worked)
+    })
+    
     # make output variables visible for the client side
     outputOptions(output, "projection_file", suspendWhenHidden = FALSE)
     outputOptions(output, "reference_file", suspendWhenHidden = FALSE)
@@ -414,4 +471,5 @@ server <- function(input, output) {
     outputOptions(output, "pdata_cell_types", suspendWhenHidden = FALSE)
     outputOptions(output, "features", suspendWhenHidden = FALSE)
     outputOptions(output, "scmap_cluster_worked", suspendWhenHidden = FALSE)
+    outputOptions(output, "scmap_cell_worked", suspendWhenHidden = FALSE)
 }

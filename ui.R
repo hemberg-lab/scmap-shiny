@@ -25,7 +25,7 @@ dashboardPage(
                      menuItem("About", tabName = "about", icon = icon("bank")),
                      menuItem("Datasets", tabName = "datasets", icon = icon("cloud-upload")),
                      menuItem("Features", tabName = "features", icon = icon("gears")),
-                     menuItem("scmap-cluster", tabName = "results_cluster", icon = icon("area-chart"))
+                     menuItem("Results", tabName = "results", icon = icon("area-chart"))
                  )
             )
         ),
@@ -40,7 +40,7 @@ dashboardPage(
                   sidebarMenu(
                       menuItem("About", tabName = "about", icon = icon("bank")),
                       menuItem("Datasets", tabName = "datasets", icon = icon("cloud-upload")),
-                      menuItem("scmap-cluster", tabName = "results_cluster", icon = icon("area-chart"))
+                      menuItem("Results", tabName = "results", icon = icon("area-chart"))
                   )
              )
         )
@@ -155,6 +155,14 @@ dashboardPage(
                                  solidHeader = TRUE
                              )
                         ),
+                        box(width = 12,
+                            HTML("<p class='lead'>Would you like to run scmap-cell? (may take some time)</p>"),
+                            radioButtons("run_scmap_cell", NULL,
+                                         c("No" = "No",
+                                           "Yes" = "Yes"),
+                                         selected = "No"),
+                            solidHeader = TRUE
+                        ),
                         solidHeader = TRUE,
                         status = "primary"
                     )
@@ -206,39 +214,20 @@ dashboardPage(
                     )
                 )
             ),
-            tabItem(tabName = "results_cluster",
+            tabItem(tabName = "results",
                 fluidRow(
-                    conditionalPanel("input.data_type == 'own'",
-                         box(width = 12,
-                             title = "Cell Projection",
-                             HTML("<p><b>scmap</b> projects all cells
-                                  of the Projection dataset to the
-                                  reference calculated from the Reference dataset. 
-                                  The Reference is computed by calculating
-                                  the median expression in each of 500 
-                                  selected features across all
-                                  cells in each cell type."),
-                             solidHeader = TRUE,
-                             status = "primary"
-                         )
-                    ),
-                    conditionalPanel("input.data_type == 'existing'",
-                        box(width = 12,
-                            title = "Cell Projection",
-                            HTML("<p><b>scmap</b> projects all cells
-                                 of the Projection dataset to the precomputed
-                                 References. The references were computed by
-                                 selecting 500 most informative features of each
-                                 Reference dataset and calculating
-                                 the median expression in each of 500 features across all
-                                 cells in each cell type."),
-                            solidHeader = TRUE,
-                            status = "primary"
-                        )
-                    )
+                  box(width = 12,
+                     title = "Cell Projection",
+                     HTML("<p><b>scmap</b> projects all cells
+                          of the Projection dataset to the
+                          either cell clusters (<b>scmap-cluster</b>) or
+                          each individual cell (<b>scmap-cell</b>) of the Reference dataset."),
+                     solidHeader = TRUE,
+                     status = "primary"
+                 )
                 ),
-                conditionalPanel(condition="!$('html').hasClass('shiny-busy') & output.scmap_cluster_worked",
-                    uiOutput("results_cluster")
+                conditionalPanel(condition="!$('html').hasClass('shiny-busy') & output.scmap_cluster_worked & output.scmap_cell_worked",
+                    uiOutput("results")
                 ),
                 conditionalPanel(condition="$('html').hasClass('shiny-busy')",
                     fluidRow(
@@ -252,11 +241,11 @@ dashboardPage(
                             offset = 2)
                     )
                 ),
-                conditionalPanel("!output.scmap_cluster_worked",
+                conditionalPanel("!output.scmap_cluster_worked || !output.scmap_cell_worked",
                     box(width = 12,
                      HTML("
                           <div class='alert alert-danger'>
-                          <p class = 'lead'>scmap-cluster did not work! Most probably
+                          <p class = 'lead'>scmap did not work! Most probably
                             Reference and Projection come from different organisms, 
                             please check your inputs!</p>
                           </div>"),
