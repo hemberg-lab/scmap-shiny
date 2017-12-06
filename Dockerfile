@@ -1,7 +1,7 @@
 FROM rocker/shiny:latest
 
 # install devel version openssl for some R packages
-RUN apt-get update -y --no-install-recommends && apt-get -y install -f \
+RUN apt-get update -y --no-install-recommends && apt-get -y install -f -t unstable \
             libssl-dev \
             libcurl4-openssl-dev
             
