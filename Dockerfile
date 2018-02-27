@@ -15,6 +15,10 @@ RUN Rscript -e "devtools::install_github('hemberg-lab/scmap')"
 # add app to the server
 ADD . /srv/shiny-server/scmap
 
+# try to avoid greying out of the apps
+# https://stackoverflow.com/questions/44397818/shiny-apps-greyed-out-nginx-proxy-over-ssl
+echo 'sanitize_errors off;disable_protocols xdr-streaming xhr-streaming iframe-eventsource iframe-htmlfile;' >> /etc/shiny-server/shiny-server.conf
+
 # expose a port
 EXPOSE 3838
 
