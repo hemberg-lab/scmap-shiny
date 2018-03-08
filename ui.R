@@ -48,6 +48,18 @@ dashboardPage(
                       menuItem("Results", tabName = "results", icon = icon("area-chart"))
                   )
              )
+        ),
+        box(width = 12,
+            title = "Disclaimer",
+            HTML("<br>
+                  <font color='black'>This site is hosted by the 
+                <a href='http://www.sanger.ac.uk/'>Wellcome Sanger Institute</a>
+                <br><br><a href='http://www.sanger.ac.uk/legal/'>Terms &amp; Conditions</a> & 
+                <a href='http://www.sanger.ac.uk/legal/cookiespolicy.html'>Cookies policy</a></font>
+                <br><br><img src='sanger_logo.jpg'><br><br>
+            "),
+            solidHeader = TRUE,
+            status = "primary"
         )
     ),
     dashboardBody(
@@ -267,4 +279,5 @@ dashboardPage(
             )
         )
     )
-))
+)
+)
