@@ -82,18 +82,13 @@ server <- function(input, output) {
     scmapCluster_index <- function() {
         if (input$data_type == "existing") {
             # load indexes
-            files <- list.files(paste0("www/scmap-cluster/", input$organism), pattern = ".csv")
+            files <- list.files("www/scmap-cluster/", pattern = ".csv")
             index <- list()
             for (f in files) {
                 name <- strsplit(f, "\\.")[[1]][1]
-                tmp <- read.csv(
-                    paste0(
-                        "www/scmap-cluster/", 
-                        input$organism, "/", f
-                    )
-                )
+                tmp <- read.csv(paste0("www/scmap-cluster/", f))
                 rownames(tmp) <- tmp[,1]
-                tmp <- tmp[,-1]
+                tmp <- tmp[,-1, drop = FALSE]
                 index[[name]] <- tmp
             }
         } else {
@@ -117,16 +112,11 @@ server <- function(input, output) {
     scmapCell_index <- function() {
         if (input$data_type == "existing") {
             # load indexes
-            files <- list.files(paste0("www/scmap-cell/", input$organism), pattern = ".rds")
+            files <- list.files("www/scmap-cell/", pattern = ".rds")
             index <- list()
             for (f in files) {
                 name <- strsplit(f, "\\.")[[1]][1]
-                tmp <- readRDS(
-                    paste0(
-                        "www/scmap-cell/", 
-                        input$organism, "/", f
-                    )
-                )
+                tmp <- readRDS(paste0("www/scmap-cell/", f))
                 index[[name]] <- tmp
             }
         } else {

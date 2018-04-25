@@ -71,7 +71,7 @@ dashboardPage(
                 }")
             )
         ),
-        tags$head(includeScript("google-analytics.js")),
+        tags$head(includeScript("../../google-analytics.js")),
         tabItems(
             tabItem(tabName = "about",
                     fluidRow(
@@ -148,16 +148,6 @@ dashboardPage(
                                  with 3514 cells)</p><br>"),
                             fileInput('to_project', NULL, accept=c('.rds')),
                             solidHeader = TRUE
-                        ),
-                        conditionalPanel("input.data_type == 'existing'",
-                            box(width = 12,
-                                HTML("<p class='lead'>What organism is your data from?</p>"),
-                                radioButtons("organism", NULL,
-                                             c("Human" = "human",
-                                               "Mouse" = "mouse"),
-                                             selected = "human"),
-                                solidHeader = TRUE
-                            )
                         ),
                         conditionalPanel("output.projection_file & !output.projection_data",
                              box(width = 12,

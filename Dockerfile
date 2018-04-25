@@ -13,7 +13,9 @@ RUN Rscript -e "source('https://bioconductor.org/biocLite.R'); biocLite('BiocIns
 RUN Rscript -e "devtools::install_github('hemberg-lab/scmap')"
 
 # add app to the server
-ADD . /srv/shiny-server/scmap
+RUN for d in atlases/*/; do cp app/* "$d"; done
+RUN for d in atlases/*/www/; do cp utils/* "$d"; done
+ADD atlases/ /srv/shiny-server
 
 # update the index page
 COPY index_page/index.html /srv/shiny-server/index.html
