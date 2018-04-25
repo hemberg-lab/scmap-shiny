@@ -71,7 +71,7 @@ dashboardPage(
                 }")
             )
         ),
-        tags$head(includeScript("../../google-analytics.js")),
+        tags$head(includeScript("google-analytics.js")),
         tabItems(
             tabItem(tabName = "about",
                     fluidRow(
