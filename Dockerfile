@@ -6,7 +6,7 @@ RUN apt-get update -y --no-install-recommends && apt-get -y install -f -t unstab
             libcurl4-openssl-dev
             
 # install R packages
-RUN Rscript -e "install.packages(c('shinydashboard', 'htmlTable', 'DT', 'devtools'))"
+RUN Rscript -e "install.packages(c('shinydashboard', 'htmlTable', 'DT', 'devtools'), type="source")"
 RUN Rscript -e "source('https://bioconductor.org/biocLite.R'); biocLite('BiocInstaller'); \
                 biocLite('SingleCellExperiment')"
 RUN Rscript -e "devtools::install_github('hemberg-lab/scmap')"
