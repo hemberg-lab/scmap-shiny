@@ -1,9 +1,9 @@
-FROM rocker/rstudio:latest
+FROM rocker/rstudio
 
-# install devel version openssl for some R packages
-# using Dirk's PPA (https://github.com/rocker-org/rocker/issues/124)
+# using Dirk's PPA (https://github.com/rocker-org/rocker/issues/124) 
+# to install some R required stuff
 # https://launchpad.net/~edd/+archive/ubuntu/misc
-RUN apt-get update && apt-get install software-properties-common && add-apt-repository ppa:edd/misc && apt-get update && apt-get install r-cran-git2r
+RUN apt-get update -y && apt-get install software-properties-common && add-apt-repository ppa:edd/misc && apt-get update -y && apt-get install r-cran-git2r
 # RUN apt-get update -y --no-install-recommends && apt-get -y install -f -t unstable \
 #            libssl-dev \
 #            libcurl4-openssl-dev
