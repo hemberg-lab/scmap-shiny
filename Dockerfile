@@ -1,4 +1,4 @@
-FROM rocker/shiny:latest
+FROM rocker/rstudio:latest
 
 # install devel version openssl for some R packages
 RUN apt-get update -y --no-install-recommends && apt-get -y install -f -t unstable \
@@ -6,7 +6,7 @@ RUN apt-get update -y --no-install-recommends && apt-get -y install -f -t unstab
             libcurl4-openssl-dev
             
 # install R packages
-RUN Rscript -e "install.packages(c('shinydashboard', 'htmlTable', 'DT', 'devtools'), type = 'source')"
+RUN Rscript -e "install.packages(c('shinydashboard', 'htmlTable', 'DT', 'devtools'))"
 RUN Rscript -e "source('https://bioconductor.org/biocLite.R'); biocLite('BiocInstaller'); \
                 biocLite('SingleCellExperiment')"
 RUN Rscript -e "devtools::install_github('hemberg-lab/scmap')"
@@ -27,7 +27,6 @@ COPY index_page/img /srv/shiny-server/img
 # https://stackoverflow.com/questions/44397818/shiny-apps-greyed-out-nginx-proxy-over-ssl
 RUN echo 'sanitize_errors off;disable_protocols xdr-streaming xhr-streaming iframe-eventsource iframe-htmlfile;' >> /etc/shiny-server/shiny-server.conf
 
-# expose a port
-EXPOSE 3838
+EXPOSE 8787
 
-CMD ["/usr/bin/shiny-server.sh"]
+CMD ["/init"]
