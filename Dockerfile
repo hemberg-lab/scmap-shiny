@@ -6,7 +6,7 @@ RUN apt-get update -y --no-install-recommends && apt-get -y install -f -t unstab
             libcurl4-openssl-dev
             
 # install R packages
-RUN Rscript -e "install.packages(c('Rcpp', 'httpuv', 'backports', 'digest', 'stringi', 'htmltools', 'shinydashboard', 'htmlTable', 'DT', 'devtools'), \
+RUN Rscript -e "install.packages(c('Rcpp', 'backports', 'digest', 'stringi', 'htmltools', 'httpuv', 'mime', 'shinydashboard', 'htmlTable', 'DT', 'devtools'), \
                 repos='https://cran.rstudio.com/')"
 RUN Rscript -e "source('https://bioconductor.org/biocLite.R'); biocLite('BiocInstaller'); \
                 biocLite('SingleCellExperiment')"
