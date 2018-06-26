@@ -1,8 +1,11 @@
 FROM rocker/rstudio
 
 # install some R required stuff
-RUN apt-get update && apt-get install libssl-dev/unstable
-            
+RUN apt-get update -y --no-install-recommends \
+    && apt-get -y install -f \
+       libssl-dev \
+       libcurl4-openssl-dev
+       
 # install R packages
 RUN Rscript -e "install.packages(c('shinydashboard', 'htmlTable', 'DT', 'devtools'))"
 RUN Rscript -e "source('https://bioconductor.org/biocLite.R'); biocLite('BiocInstaller'); \
