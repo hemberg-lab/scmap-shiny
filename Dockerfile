@@ -3,6 +3,7 @@ FROM rocker/rstudio
 # install some R required stuff
 RUN apt-get update -y --no-install-recommends \
     && apt-get -y install -f \
+       zlib1g-dev \
        libssl-dev \
        libcurl4-openssl-dev
        
