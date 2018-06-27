@@ -13,6 +13,9 @@ RUN Rscript -e "source('https://bioconductor.org/biocLite.R'); biocLite('BiocIns
                 biocLite('SingleCellExperiment')"
 RUN Rscript -e "devtools::install_github('hemberg-lab/scmap')"
 
+# install shiny
+RUN export ADD=shiny && bash /etc/cont-init.d/add
+
 # add app to the server
 ADD atlases atlases/
 ADD app app/
