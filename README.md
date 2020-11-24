@@ -39,6 +39,6 @@ To run in a detached mode on the Cloud:
 ```
 docker run -d -p 80:3838 quay.io/hemberg-group/scmap-shiny
 ```
-Then `scmap-shiny` will be accessible at http://YOUR_CLOUD_IP/scmap/. In our case it is [http://www.hemberg-lab.cloud/scmap](http://www.hemberg-lab.cloud/scmap).
+Then `scmap-shiny` will be accessible at http://YOUR_CLOUD_IP/scmap/.
 
 Alternatively, you can manually install a Shiny server on your instance and all corresponding R packages mentioned in the [Dockerfile](Dockerfile). You will also need to copy your `scmap-shiny` files to `/srv/shiny-server/scmap` folder.
